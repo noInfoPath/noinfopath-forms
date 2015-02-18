@@ -4,32 +4,26 @@
 
 #**noinfopath-validation**
 
-## _validate(el, field)
-
-##validate
+## validate(el, field)
 
 ### Params:
 
 * **object** *el* - Element.
-* **object** *field* - Elementn field.
+* **object** *field* - Element field.
 
-## _resetErrors(el, field)
-
-##resetErrors
+## resetErrors(el, field)
 
 ### Params:
 
 * **object** *el* - Element.
-* **object** *field* - Elementn field.
+* **object** *field* - Element field.
 
-## _blur(el, field)
-
-##blur
+## blur(el, field)
 
 ### Params:
 
 * **object** *el* - Element.
-* **object** *field* - Elementn field.
+* **object** *field* - Element field.
 
 ##noinfopath.validation
 Combines the functionality of validation from bootstrap and angular.

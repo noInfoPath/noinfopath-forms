@@ -5,10 +5,9 @@
 	"use strict";
 	
 	/**
-	* ##validate
-	* @private
+	* @function #validate
 	* @param {object} el - Element.
-	* @param {object} field - Elementn field.
+	* @param {object} field - Element field.
 	*/
 	function _validate(el, field){
 		el.find(".help-block").toggleClass("ng-hide", field.$valid || field.$pristine);
@@ -17,10 +16,9 @@
 	}
 	
 	/**
-	* ##resetErrors
-	* @private
+	* @function #resetErrors
 	* @param {object} el - Element.
-	* @param {object} field - Elementn field.
+	* @param {object} field - Element field.
 	*/
 	function _resetErrors(el, field){
 		el.find(".help-block").toggleClass("ng-hide", true);
@@ -29,10 +27,9 @@
 	}
 	
 	/**
-	* ##blur
-	* @private
+	* @function #blur
 	* @param {object} el - Element.
-	* @param {object} field - Elementn field.
+	* @param {object} field - Element field.
 	*/
 	function _blur(el, field){
 		if(!field.$pristine) _validate(el, field);
