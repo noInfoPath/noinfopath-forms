@@ -3,18 +3,37 @@
  */
 (function(angular,undefined){
 	"use strict";
-
+	
+	/**
+	* ##validate
+	* @private
+	* @param {object} el - Element.
+	* @param {object} field - Elementn field.
+	*/
 	function _validate(el, field){
 		el.find(".help-block").toggleClass("ng-hide", field.$valid || field.$pristine);
 		el.toggleClass("has-error", field.$invalid);
 		el.toggleClass("has-success", field.$valid);
 	}
-
+	
+	/**
+	* ##resetErrors
+	* @private
+	* @param {object} el - Element.
+	* @param {object} field - Elementn field.
+	*/
 	function _resetErrors(el, field){
 		el.find(".help-block").toggleClass("ng-hide", true);
 		el.toggleClass("has-error", false);
 		el.toggleClass("has-success", false);
 	}
+	
+	/**
+	* ##blur
+	* @private
+	* @param {object} el - Element.
+	* @param {object} field - Elementn field.
+	*/
 	function _blur(el, field){
 		if(!field.$pristine) _validate(el, field);
 	}
