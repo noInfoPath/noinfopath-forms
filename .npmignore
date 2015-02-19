@@ -1,0 +1,5 @@
+/node_modules
+/test
+.gitignore
+gruntfile.js
+karma.conf.js
