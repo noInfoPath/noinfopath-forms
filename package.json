@@ -1,8 +1,8 @@
 {
   "name": "noinfopath-validation",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "noinfopath validation module",
-  "main": "noinfopath-validation.js",
+  "main": "src/noinfopath-validation.js",
   "scripts": {
     "test": "karma start"
   },

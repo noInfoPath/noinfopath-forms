@@ -1,5 +1,5 @@
 /**
- * #**noinfopath-validation**
+ * #**noinfopath-validation@0.0.2**
  */
 (function(angular,undefined){
 	"use strict";
@@ -73,7 +73,7 @@
 	    			function _submit(form){
 	    				if(form.$valid)
 	    				{
-	    					$rootScope.$broadcast("noSubmit::dataReady");
+	    					$rootScope.$broadcast("noSubmit::dataReady", el);
 	    				}else{
 		    				$rootScope.$broadcast("no::validate");
 	    				}
