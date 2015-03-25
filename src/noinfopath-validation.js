@@ -75,7 +75,7 @@
 	    				{
 	    					$rootScope.$broadcast("noSubmit::dataReady", el);
 	    				}else{
-		    				$rootScope.$broadcast("no::validate");
+		    				$rootScope.$broadcast("no::validate", form.$valid);
 	    				}
 	    			}
 
