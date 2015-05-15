@@ -18,9 +18,11 @@ module.exports = function(config) {
         'node_modules/jasmine-ajax/lib/mock-ajax.js',
         'node_modules/angular/angular.js',
         'node_modules/angular-mocks/angular-mocks.js',
+        'src/globals.js',
+        'src/validation.js',
+        'src/forms.js',
         'test/mocks/*.*',
-        'test/*.spec.js',
-        'src/noinfopath-validation.js'
+        'test/*.spec.js'   
     ],
 
 

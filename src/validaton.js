@@ -1,6 +1,4 @@
-/**
- * #**noinfopath-validation@0.0.2**
- */
+//submit.js
 (function(angular,undefined){
 	"use strict";
 	
@@ -10,9 +8,21 @@
 	* @param {object} field - Element field.
 	*/
 	function _validate(el, field){
-		el.find(".help-block").toggleClass("ng-hide", field.$valid || field.$pristine);
-		el.toggleClass("has-error", field.$invalid);
-		el.toggleClass("has-success", field.$valid);
+		if(!field) return;
+
+		var t = el.find(".k-editor"),
+			h = el.find(".help-block");
+		
+		h.toggleClass("ng-hide", field.$valid || field.$pristine);
+		if(t.length > 0){
+			t.closest("div").parent().toggleClass("has-error", field.$invalid);
+			t.closest("div").parent().toggleClass("has-success", field.$invalid)
+			t.toggleClass("has-error", field.$invalid);
+			t.toggleClass("has-success", field.$valid);				
+		}else{
+			el.toggleClass("has-error", field.$invalid);
+			el.toggleClass("has-success", field.$valid);				
+		}
 	}
 	
 	/**
@@ -36,10 +46,10 @@
 	}
 
 	/**
-	* ##noinfopath.validation
+	* ##noinfopath.forms
 	* Combines the functionality of validation from bootstrap and angular.
 	*/
-	angular.module("noinfopath.validation", [])
+	angular.module("noinfopath.forms", [])
 		/**
 		* ##noErrors
 		* Will alert the user if errors ocurred in each field.
@@ -70,10 +80,12 @@
 	    		restrict: "A",
 	    		require: "^form",
 	    		link: function(scope, el, attr, ctrl){
-	    			function _submit(form){
+	    			function _submit(form, e){
+	    				e.preventDefault();
+
 	    				if(form.$valid)
 	    				{
-	    					$rootScope.$broadcast("noSubmit::dataReady", el);
+	    					$rootScope.$broadcast("noSubmit::dataReady", el, scope);
 	    				}else{
 		    				$rootScope.$broadcast("no::validate", form.$valid);
 	    				}
@@ -101,5 +113,6 @@
 	    			el.bind('click', _reset.bind(null, ctrl));
 	    		}
 	    	};
-	    }])		    	
-})(angular)
+	    }])	
+	;	    	
+})(angular);
