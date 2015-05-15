@@ -1,8 +1,7 @@
+[![Build Status](http://192.168.254.99:8081/job/noinfopath-forms/badge/icon)](http://192.168.254.99:8081/job/noinfopath-forms)
+![coverage](http://192.168.254.99:8082/jenkins/c/http/192.168.254.99:8081/job/noinfopath-forms)
 
-
-<!-- Start noinfopath-forms.js -->
-
-#**noinfopath-forms**
+# **noinfopath-forms**
 
 ## validate(el, field)
 
@@ -25,17 +24,14 @@
 * **object** *el* - Element.
 * **object** *field* - Element field.
 
-##noinfopath.validation
+## noinfopath.validation
 Combines the functionality of validation from bootstrap and angular.
 
-##noErrors
+## noErrors
 Will alert the user if errors ocurred in each field.
 
-##noSubmit
+## noSubmit
 When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
 
-##noReset
+## noReset
 When user clicks reset, form is reset to null state.
-
-<!-- End noinfopath-forms.js -->
-
