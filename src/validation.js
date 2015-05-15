@@ -1,4 +1,4 @@
-//submit.js
+//validation.js
 (function(angular,undefined){
 	"use strict";
 	
@@ -49,7 +49,7 @@
 	* ##noinfopath.forms
 	* Combines the functionality of validation from bootstrap and angular.
 	*/
-	angular.module("noinfopath.forms", [])
+	angular.module("noinfopath.forms")
 		/**
 		* ##noErrors
 		* Will alert the user if errors ocurred in each field.
@@ -116,3 +116,4 @@
 	    }])	
 	;	    	
 })(angular);
+
