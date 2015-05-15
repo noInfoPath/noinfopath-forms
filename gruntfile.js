@@ -14,19 +14,19 @@ module.exports = function(grunt) {
             ],
             dest: 'dist/noinfopath-forms.js'
         }
-    },
-        karma: {
-          unit: {
-            configFile: "karma.conf.js"
-          },
-          continuous: {
-            configFile: 'karma.conf.js',
-            singleRun: true,
-            browsers: ['PhantomJS']
-          }
+      },
+      karma: {
+        unit: {
+          configFile: "karma.conf.js"
         },
-        bumpup: {
-          file: 'package.json'
+        continuous: {
+          configFile: 'karma.conf.js',
+          singleRun: true,
+          browsers: ['PhantomJS']
+        }
+      },
+      bumpup: {
+        file: 'package.json'
       },
       version: {
         options: {
@@ -46,6 +46,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-version');
  
   //Default task(s).
-  grunt.registerTask('build', ['bumpup','version','karma:continuous', 'concat:noinfopath']);
+  grunt.registerTask('build', ['karma:continuous','bumpup','version','concat:noinfopath']);
 
 };

@@ -22,7 +22,7 @@ module.exports = function(config) {
         'src/validation.js',
         'src/forms.js',
         'test/mocks/*.*',
-        'test/*.spec.js'   
+        'test/*-spec.js'   
     ],
 
 
@@ -34,13 +34,18 @@ module.exports = function(config) {
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
+        'src/*.js': 'coverage'
     },
 
+    coverageReporter: {
+        type: 'cobertura',
+        dir: 'coverage/'
+    },
 
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['verbose'],
+    reporters: ['verbose','coverage'],
 
 
     // web server port

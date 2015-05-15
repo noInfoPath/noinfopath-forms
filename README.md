@@ -1,8 +1,8 @@
 
 
-<!-- Start noinfopath-validation.js -->
+<!-- Start noinfopath-forms.js -->
 
-#**noinfopath-validation**
+#**noinfopath-forms**
 
 ## validate(el, field)
 
@@ -37,5 +37,5 @@ When user clicks submit, checks to make sure the data is appropriate and returns
 ##noReset
 When user clicks reset, form is reset to null state.
 
-<!-- End noinfopath-validation.js -->
+<!-- End noinfopath-forms.js -->
 
