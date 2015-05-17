@@ -32,7 +32,8 @@
 
 						_table.noCRUD.one(req)
 							.then(function(data){
-								scope[noFormConfig.name] = data;
+								scope.$root[noFormConfig.name] = data;
+								//console.log("noForm", scope);
 							})
 							.catch(function(err){
 								console.error(err);
@@ -54,3 +55,4 @@
 
     window.noInfoPath = angular.extend(window.noInfoPath || {}, noInfoPath);
 })(angular);
+

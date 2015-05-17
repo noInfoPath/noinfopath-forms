@@ -1,6 +1,6 @@
 /**
 * ##noinfopath.forms
-* @version 0.0.2
+* @version 0.0.3
 * Combines the functionality of validation from bootstrap and angular.
 */
 	(function(angular,undefined){
@@ -136,7 +136,6 @@
 //forms.js
 (function(angular, undefined){
     angular.module("noinfopath.forms")
-
         .directive("noForm", ['$q', '$state', 'noAppStatus', 'noIndexedDB', function($q, $state, noAppStatus, noIndexedDB){
             return {
                 restrict: "A",
@@ -167,7 +166,8 @@
 
 						_table.noCRUD.one(req)
 							.then(function(data){
-								scope[noFormConfig.name] = data;
+								scope.$root[noFormConfig.name] = data;
+								//console.log("noForm", scope);
 							})
 							.catch(function(err){
 								console.error(err);
@@ -183,9 +183,9 @@
                 }
             }
         }])
-
     ;
     var noInfoPath = {};
 
     window.noInfoPath = angular.extend(window.noInfoPath || {}, noInfoPath);
 })(angular);
+
