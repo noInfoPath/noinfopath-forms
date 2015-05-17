@@ -1,7 +1,6 @@
 //forms.js
 (function(angular, undefined){
     angular.module("noinfopath.forms")
-
         .directive("noForm", ['$q', '$state', 'noAppStatus', 'noIndexedDB', function($q, $state, noAppStatus, noIndexedDB){
             return {
                 restrict: "A",
@@ -43,13 +42,19 @@
 	                    scope.$on("noSubmit::dataReady", function(e, elm, scope){
 	                        var noFormData = scope[noFormConfig.name];
 	                        console.warn("TODO: Implement save form data", noFormData, this);
+	                        _table.noCRUD.upsert({data: noFormData})
+	                        	.then(function(data){
+	                        		$state.go("^.summary");
+	                        	})
+	                        	.catch(function(err){
+	                        		alert(err);
+	                        	});
 	                    }.bind($state));                  		
                    	}
 
                 }
             }
         }])
-
     ;
     var noInfoPath = {};
 

@@ -1,6 +1,6 @@
 /**
 * ##noinfopath.forms
-* @version 0.0.3
+* @version 0.0.4
 * Combines the functionality of validation from bootstrap and angular.
 */
 	(function(angular,undefined){
@@ -177,6 +177,13 @@
 	                    scope.$on("noSubmit::dataReady", function(e, elm, scope){
 	                        var noFormData = scope[noFormConfig.name];
 	                        console.warn("TODO: Implement save form data", noFormData, this);
+	                        _table.noCRUD.upsert({data: noFormData})
+	                        	.then(function(data){
+	                        		$state.go("^.summary");
+	                        	})
+	                        	.catch(function(err){
+	                        		alert(err);
+	                        	});
 	                    }.bind($state));                  		
                    	}
 
