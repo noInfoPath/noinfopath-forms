@@ -8,41 +8,32 @@
                 //transclude: true,
                 //scope:{},
                 link: function(scope, el, attrs){
+                    if(!attrs.noForm) throw "noForm requires a value."
+                    if(!attrs.noDataSource) throw "noForm requires a noDataSource attribute."
 
-                	console.log($state.params, $state.current.data);
+                     //Ensure with have a propertly configured application.
+                    //In this case a properly configured IndexedDB also.
+                    noAppStatus.whenReady()
+                        .then(_start)
+                        .catch(function(err){
+                            console.error(err);
+                        });
 
-            		var noFormName = attrs.noForm || "noForm",
-                		noFormConfig = $state.current.data ? $state.current.data[noFormName] : undefined;
+                    function _start(){
+                        if(!$state.current.data) throw "Current state ($state.current.data) is expected to exist.";
+                        if(!$state.current.data.noDataSources) throw "Current state is expected to have a noDataSource configuration.";
+                        if(!$state.current.data.noComponents) throw "Current state is expected to have a noComponents configuration.";
 
-                   	if(noFormConfig){
-						var _table = noIndexedDB[noFormConfig.tableName],
-							req = new window.noInfoPath.noDataReadRequest($q, _table),
-							_value;
+                        var dsCfg = $state.current.data.noDataSources[attrs.noDataSource],
+                            ds = new window.noInfoPath.noDataSource(attrs.noForm, dsCfg, $state.params),
+                            formCfg = $state.current.data.noComponents[attrs.noComponent];
 
-						if(!noFormConfig.primaryKey) throw "noForm requires a primaryKey property.";
-						 
-
-						_value = $state.params[noFormConfig.primaryKey.name];
-						if(noFormConfig.primaryKey.type === "Number"){
-							_value = Number(_value);
-						}
-
-						req.addFilter(noFormConfig.primaryKey.name, "eq", _value);
-
-						_table.noCRUD.one(req)
-							.then(function(data){
-								scope.$root[noFormConfig.name] = data;
-								//console.log("noForm", scope);
-							})
-							.catch(function(err){
-								console.error(err);
-							});	                   		
-
+                        window.noInfoPath.watchFiltersOnScope(attrs, dsCfg, ds, scope, $state);               		
 
 	                    scope.$on("noSubmit::dataReady", function(e, elm, scope){
-	                        var noFormData = scope[noFormConfig.name];
-	                        console.warn("TODO: Implement save form data", noFormData, this);
-	                        _table.noCRUD.upsert({data: noFormData})
+	                        var noFormData = scope[attrs.noDataSource];
+	                        //console.warn("TODO: Implement save form data", noFormData, this);
+	                        ds.upsert({data: noFormData})
 	                        	.then(function(data){
 	                        		$state.go("^.summary");
 	                        	})
@@ -50,8 +41,24 @@
 	                        		alert(err);
 	                        	});
 	                    }.bind($state));                  		
-                   	}
+	                                    
+	                    var req = new window.noInfoPath.noDataReadRequest(ds.table, {
+	                    	data: {
+	                    		"filter": {
+	                    			filters: ds.filter
+	                    		}
+	                    	}
+	                    });
 
+						ds.transport.one(req)
+							.then(function(data){
+								scope.$root[attrs.noDataSource] = data;
+								//console.log("noForm", scope);
+							})
+							.catch(function(err){
+								console.error(err);
+							});
+					}
                 }
             }
         }])
