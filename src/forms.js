@@ -46,7 +46,8 @@
                                     "filter": {
                                         filters: ds.filter
                                     }
-                                }
+                                },
+                                expand: ds.expand
                             });
                             ds.transport.one(req)
                                 .then(function(data){
