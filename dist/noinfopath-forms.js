@@ -1,6 +1,6 @@
 /**
 * ##noinfopath.forms
-* @version 0.0.9
+* @version 0.0.10
 * Combines the functionality of validation from bootstrap and angular.
 */
 	(function(angular,undefined){
@@ -167,7 +167,7 @@
                             scope.$on("noSubmit::dataReady", function(e, elm, scope){
                                 var noFormData = scope[attrs.noDataSource];
                                 //console.warn("TODO: Implement save form data", noFormData, this);
-                                ds.upsert({data: noFormData})
+                                ds.transport.upsert({data: noFormData})
                                     .then(function(data){
                                         $state.go("^.summary");
                                     })
