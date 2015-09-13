@@ -10,12 +10,12 @@ Combines the functionality of validation from bootstrap and angular.
 
 ### Attributes
 
- |Name|Description|
- |----|-----------|
- |no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
- |no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
- |no-database|The location of the Tables or Collections that this form will read and write to.|
- |no-datasource|The name of a table, view or collection contained in the database. The data source must expose a NoCRUD interface.|
+|Name|Description|
+|----|-----------|
+|no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
+|no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
+|no-database|The location of the Tables or Collections that this form will read and write to.|
+|no-datasource|The name of a table, view or collection contained in the database. The data source must expose a NoCRUD interface.|
 
 ##### Usage
 
