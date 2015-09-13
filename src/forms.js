@@ -64,12 +64,12 @@
 						provider = $injector.get(attrs.noProvider);
 						datasource = provider.getDatabase(attrs.noDataSource);
 						//TODO: Implement noSchema use case.
+
+						_start();
 					}else{
 						var noConfig = $inject.get("noConfig");
 						noConfig.whenReady()
-							.then(function(){
-
-							});
+							.then(_start);
 					}
 
 					function _start() {
@@ -117,7 +117,7 @@
 
 					}
 
-					_start();
+
 				}
 			};
 		}]);

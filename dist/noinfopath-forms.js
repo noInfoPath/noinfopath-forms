@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.0
+* @version 0.1.1
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -80,12 +80,12 @@
 						provider = $injector.get(attrs.noProvider);
 						datasource = provider.getDatabase(attrs.noDataSource);
 						//TODO: Implement noSchema use case.
+
+						_start();
 					}else{
 						var noConfig = $inject.get("noConfig");
 						noConfig.whenReady()
-							.then(function(){
-
-							});
+							.then(_start);
 					}
 
 					function _start() {
@@ -133,7 +133,7 @@
 
 					}
 
-					_start();
+
 				}
 			};
 		}]);
