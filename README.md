@@ -9,12 +9,13 @@ Combines the functionality of validation from bootstrap and angular.
 > NOTE: This directive requires a parent element that is decorated with an `ng-form` directive.
 
 ### Attributes
-  |Name|Description|
-  |----|-----------|
-  |no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
-  |no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
-  |no-datasource|The location of the Tables or Collections that this form will read and write to.|
-  |no-schema|The name of the NoInfoPath Form Schema that defines the semantics of how data is read and written by the form.|
+
+|Name|Description|
+|----|-----------|
+|no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
+|no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
+|no-datasource|The location of the Tables or Collections that this form will read and write to.|
+|no-schema|The name of the NoInfoPath Form Schema that defines the semantics of how data is read and written by the form.|
 
 ##### Usage
 
@@ -65,4 +66,3 @@ When user clicks submit, checks to make sure the data is appropriate and returns
 ## noReset
 
 When user clicks reset, form is reset to null state.
-
