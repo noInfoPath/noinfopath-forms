@@ -42,7 +42,7 @@
 		* and noReset directive.
 		*
 		* It also provides compatibliy with Kendo UI controls and no-file-upload
-		* component. 
+		* component.
 		*
 		*/
 	    .directive('noErrors', [function() {
@@ -71,6 +71,7 @@
 	    	return {
 	    		restrict: "A",
 	    		require: "^form",
+				scope: false,
 	    		link: function(scope, el, attr, ctrl){
 	    			function _submit(form, e){
 	    				e.preventDefault();
