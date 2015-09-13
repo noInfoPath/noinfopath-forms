@@ -4,7 +4,7 @@
 
 	angular.module("noinfopath.forms")
 		/*
-		 *  ## noForm : Directive
+		 *	## noForm : Directive
 		 *
 		 *	> NOTE: This directive requires a parent element that is decorated with an `ng-form` directive.
 		 *
