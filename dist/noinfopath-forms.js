@@ -1,93 +1,212 @@
 /**
-* ##noinfopath.forms
-* @version 0.0.11
+* # noinfopath.forms
+* @version 0.1.0
+*
 * Combines the functionality of validation from bootstrap and angular.
+*
 */
 	(function(angular,undefined){
 	"use strict";
 
 
-	angular.module("noinfopath.forms", [])
+	angular.module("noinfopath.forms", ["noinfopath"])
 
-	;	    	
+	;
 })(angular);
 
+//forms.js
+(function(angular, undefined) {
+	"use strict";
+
+	angular.module("noinfopath.forms")
+		/*
+		 *  ## noForm : Directive
+		 *
+		 *	> NOTE: This directive requires a parent element that is decorated with an `ng-form` directive.
+		 *
+		 *	### Attributes
+		 *   |Name|Description|
+		 *   |----|-----------|
+		 *   |no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
+		 *   |no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
+		 *   |no-datasource|The location of the Tables or Collections that this form will read and write to.|
+		 *   |no-schema|The name of the NoInfoPath Form Schema that defines the semantics of how data is read and written by the form.|
+		 *
+		 *	##### Usage
+		 *
+		 *  ```html
+		 *
+		 *	<div no-form no-provider="noIndexedDB" no-datasource="FCFNv2" no-schema="Cooperator">
+		 *		... other form elements ...
+		 *	</div>
+		 *
+		 *  ```
+		 *   OR
+		 *
+		 *  ```html
+		 *
+		 *  <div no-form="myform">
+		 *		... other form elements ...
+		 *	</div>
+		 *
+		 *  ```
+		 *
+		 *	##### Sample NoInfoPath Form Configuration
+		 *
+		 *	```json
+		 *	{
+		 *		"myform": {
+		 *			"provider": "noIndexedDB",
+		 *			"datasource": "FCFNv2",
+		 *			"schema": "Cooperator"
+		 *		}
+		 *	}
+		 *	```
+		 */
+		.directive("noForm", ['$q', '$state', 'noAppStatus', '$injector', function($q, $state, noAppStatus, $injector) {
+			return {
+				restrict: "A",
+				//controller: [function(){}],
+				//transclude: true,
+				//scope:{},
+				link: function(scope, el, attrs) {
+					var provider, datasource, schema;
+
+					if(!attrs.noForm) {
+						if (!attrs.noProvider) throw "noForm requires a noProvider attribute when noForm is undefined.";
+						if (!attrs.noDatasource) throw "noForm requires a noDatasource attribute when noForm is undefined.";
+						if (!attrs.noSchema) throw "noForm requires a noSchema attribute when noForm is undefined.";
+
+						provider = $injector.get(attrs.noProvider);
+						datasource = provider.getDatabase(attrs.noDataSource);
+						//TODO: Implement noSchema use case.
+					}else{
+						var noConfig = $inject.get("noConfig");
+						noConfig.whenReady()
+							.then(function(){
+
+							});
+					}
+
+					function _start() {
+						var ds;
+
+						if ($state.current.data) {
+							var dsCfg = $state.current.data.noDataSources[attrs.noDataSource],
+								formCfg = $state.current.data.noComponents[attrs.noComponent];
+
+							ds = new window.noInfoPath.noDataSource(attrs.noForm, dsCfg, $state.params);
+
+							noInfoPath.watchFiltersOnScope(attrs, dsCfg, ds, scope, $state);
+
+							scope.$on("noSubmit::dataReady", function(e, elm, scope) {
+								var noFormData = scope[attrs.noDataSource];
+								//console.warn("TODO: Implement save form data", noFormData, this);
+								ds.transport.upsert({
+										data: noFormData
+									})
+									.then(function(data) {
+										$state.go("^.summary");
+									})
+									.catch(function(err) {
+										alert(err);
+									});
+							}.bind($state));
+
+							var req = new window.noInfoPath.noDataReadRequest(ds.table, {
+								data: {
+									"filter": {
+										filters: ds.filter
+									}
+								},
+								expand: ds.expand
+							});
+							ds.transport.one(req)
+								.then(function(data) {
+									scope.$root[attrs.noDataSource] = data;
+									//console.log("noForm", scope);
+								})
+								.catch(function(err) {
+									console.error(err);
+								});
+						}
+
+					}
+
+					_start();
+				}
+			};
+		}]);
+
+})(angular);
 
 //validation.js
 (function(angular,undefined){
 	"use strict";
-	
-	/**
-	* @function #validate
-	* @param {object} el - Element.
-	* @param {object} field - Element field.
-	*/
+
 	function _validate(el, field){
 		if(!field) return;
 
 		var t = el.find(".k-editor"),
 			h = el.find(".help-block");
-		
+
 		h.toggleClass("ng-hide", field.$valid || field.$pristine);
 		if(t.length > 0){
 			t.closest("div").parent().toggleClass("has-error", field.$invalid);
-			t.closest("div").parent().toggleClass("has-success", field.$invalid)
+			t.closest("div").parent().toggleClass("has-success", field.$invalid);
 			t.toggleClass("has-error", field.$invalid);
-			t.toggleClass("has-success", field.$valid);				
+			t.toggleClass("has-success", field.$valid);
 		}else{
 			el.toggleClass("has-error", field.$invalid);
-			el.toggleClass("has-success", field.$valid);				
+			el.toggleClass("has-success", field.$valid);
 		}
 	}
-	
-	/**
-	* @function #resetErrors
-	* @param {object} el - Element.
-	* @param {object} field - Element field.
-	*/
+
+
 	function _resetErrors(el, field){
 		el.find(".help-block").toggleClass("ng-hide", true);
 		el.toggleClass("has-error", false);
 		el.toggleClass("has-success", false);
 	}
-	
-	/**
-	* @function #blur
-	* @param {object} el - Element.
-	* @param {object} field - Element field.
-	*/
+
+
 	function _blur(el, field){
 		if(!field.$pristine) _validate(el, field);
 	}
 
-	/**
-	* ##noinfopath.forms
-	* Combines the functionality of validation from bootstrap and angular.
-	*/
 	angular.module("noinfopath.forms")
 		/**
-		* ##noErrors
-		* Will alert the user if errors ocurred in each field.
+		* ## noErrors
+		*
+		* The noErrors directive provides the container for applying the
+		* BootStrap validation CSS, in response to AngularJS validation
+		* attributes. The directive works in conjunction with with the noSubmit
+		* and noReset directive.
+		*
+		* It also provides compatibliy with Kendo UI controls and no-file-upload
+		* component. 
+		*
 		*/
 	    .directive('noErrors', [function() {
 		    return {
 		    	restrict: 'A',
 		    	require: '^form',
 		    	compile: function(el, attrs){
-		    		var i = el.find("INPUT, TEXTAREA, SELECT");
+					var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop]");
 		    		i.attr("name", i.attr("ng-model"));
 
 		    		return function(scope, el, attrs, ctrl) {
 			    		scope.$on('no::validate', _validate.bind(null, el, ctrl[i.attr("name")]));
 			    		scope.$on('no::validate:reset', _resetErrors.bind(null, el, ctrl[i.attr("name")]));
-						i.bind('blur', _blur.bind(null, el, ctrl[i.attr("name")]))
-					}
+						i.bind('blur', _blur.bind(null, el, ctrl[i.attr("name")]));
+					};
 		    	}
-			}	
-	    }])	
+			};
+	    }])
 
 		/**
-		* ##noSubmit
+		* ## noSubmit
+		*
 		* When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
 		*/
 	    .directive('noSubmit', ['$rootScope', function($rootScope){
@@ -109,10 +228,11 @@
 	    			el.bind('click', _submit.bind(null, ctrl));
 	    		}
 	    	};
-	    }])	
+	    }])
 
 		/**
-		* ##noReset
+		* ## noReset
+		*
 		* When user clicks reset, form is reset to null state.
 		*/
 	    .directive('noReset', ['$rootScope', function($rootScope){
@@ -128,80 +248,6 @@
 	    			el.bind('click', _reset.bind(null, ctrl));
 	    		}
 	    	};
-	    }])	
-	;	    	
-})(angular);
-
-
-//forms.js
-(function(angular, undefined){
-    angular.module("noinfopath.forms")
-        .directive("noForm", ['$q', '$state', 'noAppStatus', 'noIndexedDB', function($q, $state, noAppStatus, noIndexedDB){
-            return {
-                restrict: "A",
-                //controller: [function(){}],
-                //transclude: true,
-                //scope:{},
-                link: function(scope, el, attrs){
-                    //if(!attrs.noForm) throw "noForm requires a value."
-                    if(!attrs.noDataSource) throw "noForm requires a noDataSource attribute."
-
-                     //Ensure with have a propertly configured application.
-                    //In this case a properly configured IndexedDB also.
-                    //noAppStatus
-
-                    function _start(){
-                        var ds;
-
-                        if($state.current.data) {
-                            if(!$state.current.data.noDataSources) throw "Current state is expected to have a noDataSource configuration.";
-                            if(!$state.current.data.noComponents) throw "Current state is expected to have a noComponents configuration.";                          
-
-                            var dsCfg = $state.current.data.noDataSources[attrs.noDataSource],
-                                formCfg = $state.current.data.noComponents[attrs.noComponent];
-
-                            ds = new window.noInfoPath.noDataSource(attrs.noForm, dsCfg, $state.params),
-
-                            window.noInfoPath.watchFiltersOnScope(attrs, dsCfg, ds, scope, $state);                     
- 
-                            scope.$on("noSubmit::dataReady", function(e, elm, scope){
-                                var noFormData = scope[attrs.noDataSource];
-                                //console.warn("TODO: Implement save form data", noFormData, this);
-                                ds.transport.upsert({data: noFormData})
-                                    .then(function(data){
-                                        $state.go("^.summary");
-                                    })
-                                    .catch(function(err){
-                                        alert(err);
-                                    });
-                            }.bind($state));  
-
-                            var req = new window.noInfoPath.noDataReadRequest(ds.table, {
-                                data: {
-                                    "filter": {
-                                        filters: ds.filter
-                                    }
-                                },
-                                expand: ds.expand
-                            });
-                            ds.transport.one(req)
-                                .then(function(data){
-                                    scope.$root[attrs.noDataSource] = data;
-                                    //console.log("noForm", scope);
-                                })
-                                .catch(function(err){
-                                    console.error(err);
-                                });                         
-                        }
-
-                    }
-
-                    _start();
-                }
-            }
-        }])
-    ;
-    var noInfoPath = {};
-
-    window.noInfoPath = angular.extend(window.noInfoPath || {}, noInfoPath);
+	    }])
+	;
 })(angular);
