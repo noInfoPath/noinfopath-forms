@@ -9,6 +9,7 @@
 		 *	> NOTE: This directive requires a parent element that is decorated with an `ng-form` directive.
 		 *
 		 *	### Attributes
+		 *
 		 *   |Name|Description|
 		 *   |----|-----------|
 		 *   |no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
