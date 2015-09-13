@@ -1,5 +1,5 @@
 # noinfopath.forms
-@version 0.1.1
+@version 0.1.2
 
 Combines the functionality of validation from bootstrap and angular.
 
@@ -79,6 +79,8 @@ multi-table relationships represented by the form.
 	}
 }
 ```
+
+> NOTE: datasource.read is always expected to be a single table or view name.
 
 ## noErrors
 

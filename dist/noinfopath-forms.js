@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.1
+* @version 0.1.2
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -101,7 +101,7 @@
 				restrict: "A",
 				//controller: [function(){}],
 				//transclude: true,
-				//scope:{},
+				scope: false,
 				link: function(scope, el, attrs) {
 					var provider, database, datasource;
 
@@ -128,57 +128,58 @@
 							});
 					}
 
-					function _simpleUpsert(data){
-						if()
-						return datasource.
+					function _getFormData(){
+						var ds, data = {};
+
+						if(datasource.__type === "INoCRUD"){
+							ds = datasource;
+						}else{
+							/*
+							*	> NOTE: datasource.read is always expected to be a single table or view name.
+							*/
+							ds = database[datasource.read];
+						}
+
+						data[ds.primaryKey] = $state.params.id;
+
+						datasource.noOne(data)
+							.then(function(data) {
+								scope[attrs.noDataSource] = data;
+								//console.log("noForm", scope);
+							})
+							.catch(function(err) {
+								console.error(err);
+							});
 					}
 
-					function _multiTableUpsert(){
+					function _upsert(data){
+
+					}
+
+					function _simpleUpsert(data){
+					}
+
+					function _multiTableUpsert(data){
 
 					}
 
 					function _start() {
-
 						scope.$on("noSubmit::dataReady", function(e, elm, scope) {
 							var formData = scope[attrs.noDataSource];
 							//console.warn("TODO: Implement save form data", noFormData, this);
-							ds.transport.upsert({
-									data: noFormData
-								})
-								.then(function(data) {
-									$state.go("^.summary");
-								})
-								.catch(function(err) {
-									alert(err);
-								});
+							// ds.transport.upsert({
+							// 		data: noFormData
+							// 	})
+							// 	.then(function(data) {
+							// 		$state.go("^.summary");
+							// 	})
+							// 	.catch(function(err) {
+							// 		alert(err);
+							// 	});
 						});
 
-
-						var ds;
-
-						if ($state.current.data) {
-
-							var req = new window.noInfoPath.noDataReadRequest(ds.table, {
-								data: {
-									"filter": {
-										filters: ds.filter
-									}
-								},
-								expand: ds.expand
-							});
-							ds.transport.one(req)
-								.then(function(data) {
-									scope.$root[attrs.noDataSource] = data;
-									//console.log("noForm", scope);
-								})
-								.catch(function(err) {
-									console.error(err);
-								});
-						}
-
+						_getFormData();
 					}
-
-
 				}
 			};
 		}]);
@@ -229,7 +230,7 @@
 		* and noReset directive.
 		*
 		* It also provides compatibliy with Kendo UI controls and no-file-upload
-		* component. 
+		* component.
 		*
 		*/
 	    .directive('noErrors', [function() {
@@ -258,6 +259,7 @@
 	    	return {
 	    		restrict: "A",
 	    		require: "^form",
+				scope: false,
 	    		link: function(scope, el, attr, ctrl){
 	    			function _submit(form, e){
 	    				e.preventDefault();
