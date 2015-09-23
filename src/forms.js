@@ -58,11 +58,13 @@
 		 *					"Cooperators",
 		 *					"Addresses",
 		 *					{
-		 *						"name": "CooperatorAddresses",
-		 *						"joins": [
-		 *							"Cooperators",
-		 *							"Addresses"
-		 *						]
+		 *						"joins": {
+		 *                          "name": "CooperatorAddresses",
+		 *                          relations: [
+		 *							    "Cooperators",
+		 *							    "Addresses"
+		 *						    ]
+		 *                      }
 		 *					}
 		 * 				],
 		 *				"read": "vwCooperator",
