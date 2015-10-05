@@ -1,72 +1,179 @@
 //forms.js
-(function(angular, undefined){
-    angular.module("noinfopath.forms")
-        .directive("noForm", ['$q', '$state', 'noAppStatus', 'noIndexedDB', function($q, $state, noAppStatus, noIndexedDB){
-            return {
-                restrict: "A",
-                //controller: [function(){}],
-                //transclude: true,
-                //scope:{},
-                link: function(scope, el, attrs){
-                    //if(!attrs.noForm) throw "noForm requires a value."
-                    if(!attrs.noDataSource) throw "noForm requires a noDataSource attribute."
+(function(angular, undefined) {
+	"use strict";
 
-                     //Ensure with have a propertly configured application.
-                    //In this case a properly configured IndexedDB also.
-                    //noAppStatus
+	angular.module("noinfopath.forms")
+		/*
+		 *	## noForm : Directive
+		 *
+		 *	> NOTE: This directive requires a parent element that is decorated with an `ng-form` directive.
+		 *
+		 *	### Attributes
+		 *
+		 *	|Name|Description|
+		 *	|----|-----------|
+		 *	|no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
+		 *	|no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
+		 *	|no-database|The location of the Tables or Collections that this form will read and write to.|
+		 *	|no-datasource|The name of a table, view or collection contained in the database. The data source must expose a NoCRUD interface.|
+		 *
+		 *	##### Usage
+		 *
+		 *  ```html
+		 *
+		 *	<div no-form no-provider="noIndexedDB" no-database="FCFNv2" no-datasoure="Cooperator">
+		 *		... other form elements ...
+		 *	</div>
+		 *
+		 *  ```
+		 *   OR
+		 *
+		 *  ```html
+		 *
+		 *  <div no-form="myform">
+		 *		... other form elements ...
+		 *	</div>
+		 *
+		 *  ```
+		 *
+		 *	### NoInfoPath Form Configuration
+		 *
+		 *  When a NoInfoPath Form Configuration is used, it defines the semantics of
+		 *	how data is read and written by the form. The following is an
+		 *	example of how the configuration object is defined. Note that when
+		 *	datasource is a `String` that it is the name of an entity on the
+		 *	database.  When an obect it is instructions on how to proccess
+		 *	multi-table relationships represented by the form.
+		 *
+		 *
+		 *	##### Sample NoInfoPath Form Configuration
+		 *
+		 *	```json
+		 *	{
+		 *		"myform": {
+		 *			"provider": "noWebSQL",
+		 *			"database": "FCFNv3",
+		 *			"datasource": {
+		 *				"create": [
+		 *					"Cooperators",
+		 *					"Addresses",
+		 *					"CooperatorAddresses":
+		 *					[
+		 *						"Cooperators",
+		 *						"Addresses"
+		 *					]
+		 *
+		 * 				],
+		 *				"read": "vwCooperator",
+		 *				"update": [
+		 *					"Cooperators",
+		 *					"Addresses"
+		 * 				],
+		 *				"destroy": [
+		 *					"CooperatorAddresses",
+		 *					"Cooperators",
+		 *					"Addresses"
+		 * 				]
+		 * 			}
+		 *		}
+		 *	}
+		 *	```
+		 */
+		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noDataSource', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noDataSource, noTransactionCache) {
+			return {
+				restrict: "AE",
+				//controller: [function(){}],
+				//transclude: true,
+				scope: false,
+				link: function(scope, el, attrs) {
+					var config = noInfoPath.getItem(noConfig.current, attrs.noConfig),
+						primaryComponent = config.noComponents[config.noForm ? config.noForm.primaryComponent : config.primaryComponent],
+						dataSource = noDataSource.create(primaryComponent.noDataSource, scope),
+						releaseWaitingFor;
 
-                    function _start(){
-                        var ds;
+					scope.waitingFor = {};
+					scope.noFormReady = false;
+					scope.noForm = {
+						yeah: false,
+						boo: false
+					};
 
-                        if($state.current.data) {
-                            if(!$state.current.data.noDataSources) throw "Current state is expected to have a noDataSource configuration.";
-                            if(!$state.current.data.noComponents) throw "Current state is expected to have a noComponents configuration.";                          
+					for(var c in config.noComponents){
+						var comp = config.noComponents[c];
 
-                            var dsCfg = $state.current.data.noDataSources[attrs.noDataSource],
-                                formCfg = $state.current.data.noComponents[attrs.noComponent];
+						if(comp.scopeKey){
+							if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
+								scope.waitingFor[comp.scopeKey] = true;
+							}
 
-                            ds = new window.noInfoPath.noDataSource(attrs.noForm, dsCfg, $state.params),
+						}
 
-                            window.noInfoPath.watchFiltersOnScope(attrs, dsCfg, ds, scope, $state);                     
- 
-                            scope.$on("noSubmit::dataReady", function(e, elm, scope){
-                                var noFormData = scope[attrs.noDataSource];
-                                //console.warn("TODO: Implement save form data", noFormData, this);
-                                ds.transport.upsert({data: noFormData})
-                                    .then(function(data){
-                                        $state.go("^.summary");
-                                    })
-                                    .catch(function(err){
-                                        alert(err);
-                                    });
-                            }.bind($state));  
+					}
 
-                            var req = new window.noInfoPath.noDataReadRequest(ds.table, {
-                                data: {
-                                    "filter": {
-                                        filters: ds.filter
-                                    }
-                                },
-                                expand: ds.expand
-                            });
-                            ds.transport.one(req)
-                                .then(function(data){
-                                    scope.$root[attrs.noDataSource] = data;
-                                    //console.log("noForm", scope);
-                                })
-                                .catch(function(err){
-                                    console.error(err);
-                                });                         
-                        }
+					releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
+						var stillWaiting = false;
+						for(var w in scope.waitingFor)
+						{
+							if(scope.waitingFor[w]){
+								stillWaiting = true;
+								break;
+							}
+						}
 
-                    }
+						scope.noFormReady = !stillWaiting;
 
-                    _start();
-                }
-            }
-        }])
-    ;
-    var noInfoPath = {};
+						if(scope.noFormReady) releaseWaitingFor();
 
-    window.noInfoPath = angular.extend(window.noInfoPath || {}, noInfoPath);
+					});
+
+
+					function _growl(m) {
+						scope.noForm[m] = true;
+
+						$timeout(function() {
+							scope.noForm = {
+								yeah: false,
+								boo: false
+							};
+						}, 5000);
+
+					}
+
+					function _upsert(data){
+						//TODO: Create a new noTransaction object before saving.
+						var op;
+						if(data[primaryComponent.noDataSource.primaryKey]){
+							op = dataSource.update;
+						}else{
+							op = dataSource.create;
+						}
+
+						op(data)
+							.then(function(result){
+								//console.log("Awe yeah, record saved! ", result);
+								//$state.go("")
+								_growl("yeah");
+							})
+							.catch(function(err){
+								_growl("boo");
+							});
+					}
+
+					function _simpleUpsert(data, trans){
+					}
+
+					function _multiTableUpsert(data, trans){
+
+					}
+
+					scope.$on("noSubmit::dataReady", function(e, elm, scope) {
+						var formData = scope[primaryComponent.scopeKey];
+
+						_upsert(formData);
+
+					});
+				}
+			};
+		}]);
+
 })(angular);
