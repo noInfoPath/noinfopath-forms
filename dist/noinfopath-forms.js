@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.2
+* @version 0.1.3
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -73,13 +73,12 @@
 		 *				"create": [
 		 *					"Cooperators",
 		 *					"Addresses",
-		 *					{
-		 *						"name": "CooperatorAddresses",
-		 *						"joins": [
-		 *							"Cooperators",
-		 *							"Addresses"
-		 *						]
-		 *					}
+		 *					"CooperatorAddresses":
+		 *					[
+		 *						"Cooperators",
+		 *						"Addresses"
+		 *					]
+		 *
 		 * 				],
 		 *				"read": "vwCooperator",
 		 *				"update": [
@@ -96,90 +95,99 @@
 		 *	}
 		 *	```
 		 */
-		.directive("noForm", ['$q', '$state', 'noAppStatus', '$injector', 'noConfig', function($q, $state, noAppStatus, $injector, noConfig) {
+		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noDataSource', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noDataSource, noTransactionCache) {
 			return {
-				restrict: "A",
+				restrict: "AE",
 				//controller: [function(){}],
 				//transclude: true,
 				scope: false,
 				link: function(scope, el, attrs) {
-					var provider, database, datasource;
+					var config = noInfoPath.getItem(noConfig.current, attrs.noConfig),
+						primaryComponent = config.noComponents[config.noForm ? config.noForm.primaryComponent : config.primaryComponent],
+						dataSource = noDataSource.create(primaryComponent.noDataSource, scope),
+						releaseWaitingFor;
 
-					if(!attrs.noForm) {
-						if (!attrs.noProvider) throw "noForm requires a noProvider attribute when noForm is undefined.";
-						if (!attrs.noDatabase) throw "noForm requires a noDatasource attribute when noForm is undefined.";
-						if (!attrs.noDatasource) throw "noForm requires a noSchema attribute when noForm is undefined.";
+					scope.waitingFor = {};
+					scope.noFormReady = false;
+					scope.noForm = {
+						yeah: false,
+						boo: false
+					};
 
-						provider = $injector.get(attrs.noProvider);
-						database = provider.getDatabase(attrs.noDataSource);
-						datasource = datasource[attrs.noDatasource];
+					for(var c in config.noComponents){
+						var comp = config.noComponents[c];
 
-						_start();
-					}else{
-						noConfig.whenReady()
-							.then(function(){
-								var cfg = noConfig.current.components[attrs.noForm];
+						if(comp.scopeKey){
+							if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
+								scope.waitingFor[comp.scopeKey] = true;
+							}
 
-								provider = $injector.get(cfg.provider);
-								database = provider.getDatabase(cfg.datasource);
-								datasource = cfg.datasource;
-
-								_start();
-							});
-					}
-
-					function _getFormData(){
-						var ds, data = {};
-
-						if(datasource.__type === "INoCRUD"){
-							ds = datasource;
-						}else{
-							/*
-							*	> NOTE: datasource.read is always expected to be a single table or view name.
-							*/
-							ds = database[datasource.read];
 						}
 
-						data[ds.primaryKey] = $state.params.id;
+					}
 
-						datasource.noOne(data)
-							.then(function(data) {
-								scope[attrs.noDataSource] = data;
-								//console.log("noForm", scope);
-							})
-							.catch(function(err) {
-								console.error(err);
-							});
+					releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
+						var stillWaiting = false;
+						for(var w in scope.waitingFor)
+						{
+							if(scope.waitingFor[w]){
+								stillWaiting = true;
+								break;
+							}
+						}
+
+						scope.noFormReady = !stillWaiting;
+
+						if(scope.noFormReady) releaseWaitingFor();
+
+					});
+
+
+					function _growl(m) {
+						scope.noForm[m] = true;
+
+						$timeout(function() {
+							scope.noForm = {
+								yeah: false,
+								boo: false
+							};
+						}, 5000);
+
 					}
 
 					function _upsert(data){
+						//TODO: Create a new noTransaction object before saving.
+						var op;
+						if(data[primaryComponent.noDataSource.primaryKey]){
+							op = dataSource.update;
+						}else{
+							op = dataSource.create;
+						}
+
+						op(data)
+							.then(function(result){
+								//console.log("Awe yeah, record saved! ", result);
+								//$state.go("")
+								_growl("yeah");
+							})
+							.catch(function(err){
+								_growl("boo");
+							});
+					}
+
+					function _simpleUpsert(data, trans){
+					}
+
+					function _multiTableUpsert(data, trans){
 
 					}
 
-					function _simpleUpsert(data){
-					}
+					scope.$on("noSubmit::dataReady", function(e, elm, scope) {
+						var formData = scope[primaryComponent.scopeKey];
 
-					function _multiTableUpsert(data){
+						_upsert(formData);
 
-					}
-
-					function _start() {
-						scope.$on("noSubmit::dataReady", function(e, elm, scope) {
-							var formData = scope[attrs.noDataSource];
-							//console.warn("TODO: Implement save form data", noFormData, this);
-							// ds.transport.upsert({
-							// 		data: noFormData
-							// 	})
-							// 	.then(function(data) {
-							// 		$state.go("^.summary");
-							// 	})
-							// 	.catch(function(err) {
-							// 		alert(err);
-							// 	});
-						});
-
-						_getFormData();
-					}
+					});
 				}
 			};
 		}]);
@@ -296,5 +304,33 @@
 	    		}
 	    	};
 	    }])
+
+		.directive("noEnterKey",[function(){
+			function _enterPressed(el, scope, attr){
+				el.bind("keypress", function(e){
+					var keyCode = e.which || e.keyCode;
+
+					if(keyCode === 13) //Enter is pressed
+					{
+					  var frm = el.closest("[no-form]");
+
+						frm.find("[no-submit]").click(); //Assume that it is a button
+					}
+				});
+			}
+
+			function _link(scope, el, attr){
+				console.warn("This will be refactored into a different module in a future release");
+				_enterPressed(el,scope);
+			}
+
+			var directive = {
+					restrict: "A",
+					link: _link
+				};
+
+			return directive;
+		}])
+
 	;
 })(angular);

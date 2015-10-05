@@ -108,5 +108,33 @@
 	    		}
 	    	};
 	    }])
+
+		.directive("noEnterKey",[function(){
+			function _enterPressed(el, scope, attr){
+				el.bind("keypress", function(e){
+					var keyCode = e.which || e.keyCode;
+
+					if(keyCode === 13) //Enter is pressed
+					{
+					  var frm = el.closest("[no-form]");
+
+						frm.find("[no-submit]").click(); //Assume that it is a button
+					}
+				});
+			}
+
+			function _link(scope, el, attr){
+				console.warn("This will be refactored into a different module in a future release");
+				_enterPressed(el,scope);
+			}
+
+			var directive = {
+					restrict: "A",
+					link: _link
+				};
+
+			return directive;
+		}])
+
 	;
 })(angular);

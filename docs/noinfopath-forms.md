@@ -1,5 +1,5 @@
 # noinfopath.forms
-@version 0.1.2
+@version 0.1.3
 
 Combines the functionality of validation from bootstrap and angular.
 
@@ -57,13 +57,12 @@ multi-table relationships represented by the form.
 			"create": [
 				"Cooperators",
 				"Addresses",
-				{
-					"name": "CooperatorAddresses",
-					"joins": [
-						"Cooperators",
-						"Addresses"
-					]
-				}
+				"CooperatorAddresses":
+				[
+					"Cooperators",
+					"Addresses"
+				]
+
 				],
 			"read": "vwCooperator",
 			"update": [
@@ -79,8 +78,6 @@ multi-table relationships represented by the form.
 	}
 }
 ```
-
-> NOTE: datasource.read is always expected to be a single table or view name.
 
 ## noErrors
 
