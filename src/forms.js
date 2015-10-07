@@ -79,7 +79,7 @@
 		 *	}
 		 *	```
 		 */
-		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noDataSource', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noDataSource, noTransactionCache) {
+		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noLoginService, noTransactionCache) {
 			return {
 				restrict: "AE",
 				//controller: [function(){}],
@@ -87,8 +87,8 @@
 				scope: false,
 				link: function(scope, el, attrs) {
 					var config = noInfoPath.getItem(noConfig.current, attrs.noConfig),
-						primaryComponent = config.noComponents[config.noForm ? config.noForm.primaryComponent : config.primaryComponent],
-						dataSource = noDataSource.create(primaryComponent.noDataSource, scope),
+						noForm = config.noForm,
+						primaryComponent,/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
 						releaseWaitingFor;
 
 					scope.waitingFor = {};
@@ -139,38 +139,18 @@
 
 					}
 
-					function _upsert(data){
-						//TODO: Create a new noTransaction object before saving.
-						var op;
-						if(data[primaryComponent.noDataSource.primaryKey]){
-							op = dataSource.update;
-						}else{
-							op = dataSource.create;
-						}
+					scope.$on("noSubmit::dataReady", function(e, elm, scope) {
+						var noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, noForm.noTransactions),
+							entityName = elm.attr("no-submit");
 
-						op(data)
+						noTrans.upsert(entityName, scope)
 							.then(function(result){
-								//console.log("Awe yeah, record saved! ", result);
-								//$state.go("")
+								noTransactionCache.endTransaction(noTrans);
 								_growl("yeah");
 							})
 							.catch(function(err){
 								_growl("boo");
 							});
-					}
-
-					function _simpleUpsert(data, trans){
-					}
-
-					function _multiTableUpsert(data, trans){
-
-					}
-
-					scope.$on("noSubmit::dataReady", function(e, elm, scope) {
-						var formData = scope[primaryComponent.scopeKey];
-
-						_upsert(formData);
-
 					});
 				}
 			};
