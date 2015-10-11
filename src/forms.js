@@ -79,17 +79,48 @@
 		 *	}
 		 *	```
 		 */
-		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noLoginService, noTransactionCache) {
+		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache) {
 			return {
-				restrict: "AE",
+				restrict: "E",
 				//controller: [function(){}],
 				//transclude: true,
 				scope: false,
 				link: function(scope, el, attrs) {
-					var config = noInfoPath.getItem(noConfig.current, attrs.noConfig),
-						noForm = config.noForm,
-						primaryComponent,/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
-						releaseWaitingFor;
+					noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+						.then(function(config){
+							var noForm = config.noForm,
+								primaryComponent;
+								/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+
+
+							for(var c in config.noComponents){
+								var comp = config.noComponents[c];
+
+								if(comp.scopeKey){
+									if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
+										scope.waitingFor[comp.scopeKey] = true;
+									}
+
+								}
+
+							}
+
+
+							scope.$on("noSubmit::dataReady", function(e, elm, scope) {
+								var noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, noForm.noTransactions),
+									entityName = elm.attr("no-submit");
+
+								noTrans.upsert(entityName, scope)
+									.then(function(result){
+										_growl("yeah");
+										noTransactionCache.endTransaction(noTrans);
+									})
+									.catch(function(err){
+										_growl("boo");
+									});
+							});
+
+						});
 
 					scope.waitingFor = {};
 					scope.noFormReady = false;
@@ -98,19 +129,7 @@
 						boo: false
 					};
 
-					for(var c in config.noComponents){
-						var comp = config.noComponents[c];
-
-						if(comp.scopeKey){
-							if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
-								scope.waitingFor[comp.scopeKey] = true;
-							}
-
-						}
-
-					}
-
-					releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
+					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
 						var stillWaiting = false;
 						for(var w in scope.waitingFor)
 						{
@@ -139,19 +158,7 @@
 
 					}
 
-					scope.$on("noSubmit::dataReady", function(e, elm, scope) {
-						var noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, noForm.noTransactions),
-							entityName = elm.attr("no-submit");
 
-						noTrans.upsert(entityName, scope)
-							.then(function(result){
-								noTransactionCache.endTransaction(noTrans);
-								_growl("yeah");
-							})
-							.catch(function(err){
-								_growl("boo");
-							});
-					});
 				}
 			};
 		}]);

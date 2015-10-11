@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.4
+* @version 0.1.5
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -95,17 +95,48 @@
 		 *	}
 		 *	```
 		 */
-		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noLoginService, noTransactionCache) {
+		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache) {
 			return {
-				restrict: "AE",
+				restrict: "E",
 				//controller: [function(){}],
 				//transclude: true,
 				scope: false,
 				link: function(scope, el, attrs) {
-					var config = noInfoPath.getItem(noConfig.current, attrs.noConfig),
-						noForm = config.noForm,
-						primaryComponent,/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
-						releaseWaitingFor;
+					noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+						.then(function(config){
+							var noForm = config.noForm,
+								primaryComponent;
+								/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+
+
+							for(var c in config.noComponents){
+								var comp = config.noComponents[c];
+
+								if(comp.scopeKey){
+									if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
+										scope.waitingFor[comp.scopeKey] = true;
+									}
+
+								}
+
+							}
+
+
+							scope.$on("noSubmit::dataReady", function(e, elm, scope) {
+								var noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, noForm.noTransactions),
+									entityName = elm.attr("no-submit");
+
+								noTrans.upsert(entityName, scope)
+									.then(function(result){
+										_growl("yeah");
+										noTransactionCache.endTransaction(noTrans);
+									})
+									.catch(function(err){
+										_growl("boo");
+									});
+							});
+
+						});
 
 					scope.waitingFor = {};
 					scope.noFormReady = false;
@@ -114,19 +145,7 @@
 						boo: false
 					};
 
-					for(var c in config.noComponents){
-						var comp = config.noComponents[c];
-
-						if(comp.scopeKey){
-							if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
-								scope.waitingFor[comp.scopeKey] = true;
-							}
-
-						}
-
-					}
-
-					releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
+					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
 						var stillWaiting = false;
 						for(var w in scope.waitingFor)
 						{
@@ -155,19 +174,7 @@
 
 					}
 
-					scope.$on("noSubmit::dataReady", function(e, elm, scope) {
-						var noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, noForm.noTransactions),
-							entityName = elm.attr("no-submit");
 
-						noTrans.upsert(entityName, scope)
-							.then(function(result){
-								noTransactionCache.endTransaction(noTrans);
-								_growl("yeah");
-							})
-							.catch(function(err){
-								_growl("boo");
-							});
-					});
 				}
 			};
 		}]);
@@ -313,4 +320,128 @@
 		}])
 
 	;
+})(angular);
+
+//form-config.js
+(function(angular,undefined){
+	"use strict";
+
+	angular.module("noinfopath.forms")
+		.service("noFormConfig", ["$q", "$http", "$rootScope", "noDataSource", "noLocalStorage", function($q, $http, $rootScope, noDataSource, noLocalStorage){
+			var isDbPopulated = noLocalStorage.getItem("dbPopulated_NoInfoPath_dtc_v1"),
+				dsConfig = {
+					"dataProvider": "noIndexedDb",
+					"databaseName": "NoInfoPath_dtc_v1",
+					"entityName": "NoInfoPath_Forms",
+					"primaryKey": "FormID"
+				},
+				dataSource;
+
+			this.whenReady = function(){
+				 dataSource = noDataSource.create(dsConfig, $rootScope);
+
+				return $q(function(resolve, reject){
+
+					if(isDbPopulated){
+						resolve();
+					}else{
+						$http.get("/no-forms.json")
+							.then(function(resp){
+								var forms = resp.data,
+									promises = [];
+
+								for(var f in forms){
+									var frm = forms[f];
+
+									if(f === "editors"){
+										for(var e in frm){
+											var editor = frm[e];
+
+											editor.search.shortName = "search_" + e;
+											editor.search.routeToken = e;
+											promises.push(dataSource.create(editor.search));
+
+											editor.edit.shortName = "edit_" + e;
+											editor.edit.routeToken = e;
+											promises.push(dataSource.create(editor.edit));
+										}
+									}else{
+										frm.shortName = f;
+										promises.push(dataSource.create(frm));
+									}
+								}
+
+								$q.all(promises)
+									.then(function(){
+										noLocalStorage.setItem("dbPopulated_NoInfoPath_dtc_v1", {timestamp: new Date()});
+										resolve();
+									})
+									.catch(reject);
+							})
+							.catch(function(err){
+								reject(err);
+							});
+
+					}
+				});
+			};
+
+			this.getFormByShortName = function(shortName, scope){
+				var form = noInfoPath.getItem(scope, shortName),
+					promise;
+
+				if(form){
+					promise = $q.when(form);
+				}else{
+					promise = dataSource.entity
+						.where("shortName")
+						.equals(shortName)
+						.toArray()
+						.then(function(data){
+							form = data.length ? data[0] : undefined;
+							scope[shortName] = form;
+							return form;
+						});
+				}
+
+
+				return promise;
+			};
+
+
+			this.getFormByRoute = function(routeName, entityName, scope){
+				var promise,
+					routeKey = entityName ? routeName + entityName : routeName,
+					form = noInfoPath.getItem(scope, routeKey);
+
+				if(form){
+					promise = $when(form);
+				}else{
+					if(entityName){
+						promise = dataSource.entity
+							.where("[route.name+routeToken]")
+							.equals([routeName, entityName])
+							.toArray()
+							.then(function(data){
+								form = data.length ? data[0] : undefined;
+								scope[routeKey] = form;
+								return form;
+							});
+					}else{
+						promise = dataSource.entity
+							.where("route.name")
+							.equals(routeName)
+							.toArray()
+							.then(function(data){
+								form = data.length ? data[0] : undefined;
+								scope[routeKey] = form;
+								return form;
+							});
+					}
+
+				}
+
+				return promise;
+			};
+		}]);
 })(angular);
