@@ -18,47 +18,54 @@
 
 				return $q(function(resolve, reject){
 
-					if(isDbPopulated){
-						resolve();
-					}else{
-						$http.get("/no-forms.json")
-							.then(function(resp){
-								var forms = resp.data,
-									promises = [];
+					$http.get("/no-forms.json")
+						.then(function(resp){
+							var forms = resp.data,
+								promises = [];
 
-								for(var f in forms){
-									var frm = forms[f];
+							dataSource.entity.clear()
+								.then(function(){
+									for(var f in forms){
+										var frm = forms[f];
 
-									if(f === "editors"){
-										for(var e in frm){
-											var editor = frm[e];
+										if(f === "editors"){
+											for(var e in frm){
+												var editor = frm[e];
 
-											editor.search.shortName = "search_" + e;
-											editor.search.routeToken = e;
-											promises.push(dataSource.create(editor.search));
+												editor.search.shortName = "search_" + e;
+												editor.search.routeToken = e;
+												promises.push(dataSource.create(editor.search));
 
-											editor.edit.shortName = "edit_" + e;
-											editor.edit.routeToken = e;
-											promises.push(dataSource.create(editor.edit));
+												editor.edit.shortName = "edit_" + e;
+												editor.edit.routeToken = e;
+												promises.push(dataSource.create(editor.edit));
+											}
+										}else{
+											frm.shortName = f;
+											promises.push(dataSource.create(frm));
 										}
-									}else{
-										frm.shortName = f;
-										promises.push(dataSource.create(frm));
 									}
-								}
 
-								$q.all(promises)
-									.then(function(){
-										noLocalStorage.setItem("dbPopulated_NoInfoPath_dtc_v1", {timestamp: new Date()});
-										resolve();
-									})
-									.catch(reject);
-							})
-							.catch(function(err){
+									$q.all(promises)
+										.then(function(){
+											noLocalStorage.setItem("dbPopulated_NoInfoPath_dtc_v1", {timestamp: new Date()});
+											resolve();
+										})
+										.catch(reject);
+
+								});
+
+						})
+						.catch(function(err){
+
+							if(isDbPopulated){
+								resolve();
+							}else{
 								reject(err);
-							});
+							}
+						});
 
-					}
+
 				});
 			};
 
@@ -91,7 +98,7 @@
 					form = noInfoPath.getItem(scope, routeKey);
 
 				if(form){
-					promise = $when(form);
+					promise = $q.when(form);
 				}else{
 					if(entityName){
 						promise = dataSource.entity
