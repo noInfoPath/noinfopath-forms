@@ -70,7 +70,7 @@
 	    .directive('noSubmit', ['$rootScope', function($rootScope){
 	    	return {
 	    		restrict: "A",
-	    		require: "^form",
+	    		require: "?^^form",
 				scope: false,
 	    		link: function(scope, el, attr, ctrl){
 	    			function _submit(form, e){

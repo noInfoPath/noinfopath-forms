@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.7
+* @version 0.1.8
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -255,7 +255,7 @@
 	    .directive('noSubmit', ['$rootScope', function($rootScope){
 	    	return {
 	    		restrict: "A",
-	    		require: "^form",
+	    		require: "?^^form",
 				scope: false,
 	    		link: function(scope, el, attr, ctrl){
 	    			function _submit(form, e){
