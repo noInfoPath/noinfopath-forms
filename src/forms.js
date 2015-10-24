@@ -107,10 +107,12 @@
 
 
 							scope.$on("noSubmit::dataReady", function(e, elm, scope) {
-								var noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, noForm.noTransactions),
-									entityName = elm.attr("no-submit");
+								var entityName = elm.attr("no-submit"),
+									comp = noForm.noComponents[entityName],
+									noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
+									data = scope[entityName];
 
-								noTrans.upsert(entityName, scope)
+								noTrans.upsert(data)
 									.then(function(result){
 										_growl("yeah");
 										noTransactionCache.endTransaction(noTrans);
