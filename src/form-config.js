@@ -95,7 +95,7 @@
 			this.getFormByRoute = function(routeName, entityName, scope){
 				var promise,
 					routeKey = entityName ? routeName + entityName : routeName,
-					form = noInfoPath.getItem(scope, routeKey);
+					form = scope[routeKey];
 
 				if(form){
 					promise = $q.when(form);

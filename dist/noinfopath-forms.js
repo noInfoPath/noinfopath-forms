@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.6
+* @version 0.1.7
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -421,7 +421,7 @@
 			this.getFormByRoute = function(routeName, entityName, scope){
 				var promise,
 					routeKey = entityName ? routeName + entityName : routeName,
-					form = noInfoPath.getItem(scope, routeKey);
+					form = scope[routeKey];
 
 				if(form){
 					promise = $q.when(form);
