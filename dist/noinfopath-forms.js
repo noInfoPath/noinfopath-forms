@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.8
+* @version 0.1.9
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -217,6 +217,32 @@
 		if(!field.$pristine) _validate(el, field);
 	}
 
+	/*
+		### NoFormValidate
+
+		This class exists because of a bug with nested custom directives and
+		my apparent misunderstanding of how directives actaull work.  :(
+	*/
+	function NoFormValidate(el){
+		Object.defineProperties(this, {
+			"$valid": {
+				"get": function(){
+					return el.closest("[ng-form]").hasClass("ng-valid");
+				}
+			},
+			"$invalid": {
+				"get": function(){
+					return el.closest("[ng-form]").hasClass("ng-invalid");
+				}
+			},
+			"$pristine": {
+				"get": function(){
+					return el.closest("[ng-form]").hasClass("ng-pristine");
+				}
+			}
+		});
+	}
+
 	angular.module("noinfopath.forms")
 		/**
 		* ## noErrors
@@ -239,6 +265,7 @@
 		    		i.attr("name", i.attr("ng-model"));
 
 		    		return function(scope, el, attrs, ctrl) {
+						console.info("Linking noErrors");
 			    		scope.$on('no::validate', _validate.bind(null, el, ctrl[i.attr("name")]));
 			    		scope.$on('no::validate:reset', _resetErrors.bind(null, el, ctrl[i.attr("name")]));
 						i.bind('blur', _blur.bind(null, el, ctrl[i.attr("name")]));
@@ -252,14 +279,19 @@
 		*
 		* When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
 		*/
-	    .directive('noSubmit', ['$rootScope', function($rootScope){
+	    .directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope){
 	    	return {
 	    		restrict: "A",
-	    		require: "?^^form",
+				require: "?^^form",
 				scope: false,
-	    		link: function(scope, el, attr, ctrl){
+	    		link: function(scope, el, attr, form){
+					console.info("Linking noSubmit");
+
 	    			function _submit(form, e){
 	    				e.preventDefault();
+						if(!form){
+							form = new NoFormValidate(el);
+						}
 
 	    				if(form.$valid)
 	    				{
@@ -269,7 +301,8 @@
 	    				}
 	    			}
 
-	    			el.bind('click', _submit.bind(null, ctrl));
+					var tmp = _submit.bind(null, form);
+					el.click(tmp);
 	    		}
 	    	};
 	    }])

@@ -1,5 +1,5 @@
 # noinfopath.forms
-@version 0.1.8
+@version 0.1.9
 
 Combines the functionality of validation from bootstrap and angular.
 
@@ -78,6 +78,12 @@ multi-table relationships represented by the form.
 	}
 }
 ```
+
+### NoFormValidate
+
+
+This class exists because of a bug with nested custom directives and
+my apparent misunderstanding of how directives actaull work.  :(
 
 ## noErrors
 
