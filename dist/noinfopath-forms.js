@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 0.1.10
+* @version 1.0.1
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -134,6 +134,7 @@
 										noTransactionCache.endTransaction(noTrans);
 									})
 									.catch(function(err){
+										console.error(err);
 										_growl("boo");
 									});
 							});

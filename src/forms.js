@@ -118,6 +118,7 @@
 										noTransactionCache.endTransaction(noTrans);
 									})
 									.catch(function(err){
+										console.error(err);
 										_growl("boo");
 									});
 							});
