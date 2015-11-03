@@ -1,5 +1,4 @@
 test1:
     script: 
         - npm install
-        - bower install
         - grunt karma:continuous
