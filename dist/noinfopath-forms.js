@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.1
+* @version 1.0.2
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -103,17 +103,17 @@
 				scope: false,
 				link: function(scope, el, attrs) {
 					noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-						.then(function(config){
+						.then(function(config) {
 							var noForm = config.noForm,
 								primaryComponent;
-								/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+							/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
 
 
-							for(var c in config.noComponents){
+							for (var c in config.noComponents) {
 								var comp = config.noComponents[c];
 
-								if(comp.scopeKey){
-									if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
+								if (comp.scopeKey) {
+									if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
 										scope.waitingFor[comp.scopeKey] = true;
 									}
 
@@ -129,11 +129,12 @@
 									data = scope[entityName];
 
 								noTrans.upsert(data)
-									.then(function(result){
-										_growl("yeah");
+									.then(function(result) {
+										_growl("yeah");  //TODO: refactor _grown into a service.
 										noTransactionCache.endTransaction(noTrans);
+										scope.$emit("noSubmit::success");
 									})
-									.catch(function(err){
+									.catch(function(err) {
 										console.error(err);
 										_growl("boo");
 									});
@@ -148,11 +149,10 @@
 						boo: false
 					};
 
-					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
+					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval) {
 						var stillWaiting = false;
-						for(var w in scope.waitingFor)
-						{
-							if(scope.waitingFor[w]){
+						for (var w in scope.waitingFor) {
+							if (scope.waitingFor[w]) {
 								stillWaiting = true;
 								break;
 							}
@@ -160,7 +160,7 @@
 
 						scope.noFormReady = !stillWaiting;
 
-						if(scope.noFormReady) releaseWaitingFor();
+						if (scope.noFormReady) releaseWaitingFor();
 
 					});
 
@@ -185,37 +185,37 @@
 })(angular);
 
 //validation.js
-(function(angular,undefined){
+(function(angular, undefined) {
 	"use strict";
 
-	function _validate(el, field){
-		if(!field) return;
+	function _validate(el, field) {
+		if (!field) return;
 
 		var t = el.find(".k-editor"),
 			h = el.find(".help-block");
 
 		h.toggleClass("ng-hide", field.$valid || field.$pristine);
-		if(t.length > 0){
+		if (t.length > 0) {
 			t.closest("div").parent().toggleClass("has-error", field.$invalid);
 			t.closest("div").parent().toggleClass("has-success", field.$invalid);
 			t.toggleClass("has-error", field.$invalid);
 			t.toggleClass("has-success", field.$valid);
-		}else{
+		} else {
 			el.toggleClass("has-error", field.$invalid);
 			el.toggleClass("has-success", field.$valid);
 		}
 	}
 
 
-	function _resetErrors(el, field){
+	function _resetErrors(el, field) {
 		el.find(".help-block").toggleClass("ng-hide", true);
 		el.toggleClass("has-error", false);
 		el.toggleClass("has-success", false);
 	}
 
 
-	function _blur(el, field){
-		if(!field.$pristine) _validate(el, field);
+	function _blur(el, field) {
+		if (!field.$pristine) _validate(el, field);
 	}
 
 	/*
@@ -224,136 +224,161 @@
 		This class exists because of a bug with nested custom directives and
 		my apparent misunderstanding of how directives actaull work.  :(
 	*/
-	function NoFormValidate(el){
+	function NoFormValidate(el) {
 		Object.defineProperties(this, {
 			"$valid": {
-				"get": function(){
+				"get": function() {
 					return el.closest("[ng-form]").hasClass("ng-valid");
 				}
 			},
 			"$invalid": {
-				"get": function(){
+				"get": function() {
 					return el.closest("[ng-form]").hasClass("ng-invalid");
 				}
 			},
 			"$pristine": {
-				"get": function(){
+				"get": function() {
 					return el.closest("[ng-form]").hasClass("ng-pristine");
 				}
 			}
 		});
+
+		this.$setPristine = function() {
+			el.closest("[ng-form]").addClass("ng-pristine");
+
+		};
 	}
 
 	angular.module("noinfopath.forms")
 		/**
-		* ## noErrors
-		*
-		* The noErrors directive provides the container for applying the
-		* BootStrap validation CSS, in response to AngularJS validation
-		* attributes. The directive works in conjunction with with the noSubmit
-		* and noReset directive.
-		*
-		* It also provides compatibliy with Kendo UI controls and no-file-upload
-		* component.
-		*
-		*/
-	    .directive('noErrors', [function() {
-		    return {
-		    	restrict: 'A',
-		    	require: '^form',
-		    	compile: function(el, attrs){
+		 * ## noErrors
+		 *
+		 * The noErrors directive provides the container for applying the
+		 * BootStrap validation CSS, in response to AngularJS validation
+		 * attributes. The directive works in conjunction with with the noSubmit
+		 * and noReset directive.
+		 *
+		 * It also provides compatibliy with Kendo UI controls and no-file-upload
+		 * component.
+		 *
+		 */
+		.directive('noErrors', [function() {
+			return {
+				restrict: 'A',
+				require: '?^^form',
+				compile: function(el, attrs) {
 					var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop]");
-		    		i.attr("name", i.attr("ng-model"));
+					i.attr("name", i.attr("ng-model"));
 
-		    		return function(scope, el, attrs, ctrl) {
-						console.info("Linking noErrors");
-			    		scope.$on('no::validate', _validate.bind(null, el, ctrl[i.attr("name")]));
-			    		scope.$on('no::validate:reset', _resetErrors.bind(null, el, ctrl[i.attr("name")]));
-						i.bind('blur', _blur.bind(null, el, ctrl[i.attr("name")]));
-					};
-		    	}
-			};
-	    }])
+					return function(scope, el, attrs, form) {
 
-		/**
-		* ## noSubmit
-		*
-		* When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
-		*/
-	    .directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope){
-	    	return {
-	    		restrict: "A",
-				require: "?^^form",
-				scope: false,
-	    		link: function(scope, el, attr, form){
-					console.info("Linking noSubmit");
-
-	    			function _submit(form, e){
-	    				e.preventDefault();
-						if(!form){
+						if (!form) {
 							form = new NoFormValidate(el);
 						}
 
-	    				if(form.$valid)
-	    				{
-	    					$rootScope.$broadcast("noSubmit::dataReady", el, scope);
-	    				}else{
-		    				$rootScope.$broadcast("no::validate", form.$valid);
-	    				}
-	    			}
+						scope.$on('no::validate', _validate.bind(null, el, form[i.attr("name")]));
+						scope.$on('no::validate:reset', _resetErrors.bind(null, el, form[i.attr("name")]));
+						i.bind('blur', _blur.bind(null, el, form[i.attr("name")]));
+					};
+				}
+			};
+		}])
 
-					var tmp = _submit.bind(null, form);
-					el.click(tmp);
-	    		}
-	    	};
-	    }])
+	/**
+	 * ## noSubmit
+	 *
+	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+	 */
+	.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+		return {
+			restrict: "A",
+			require: "?^^form",
+			scope: false,
+			link: function(scope, el, attr, form) {
+				console.info("Linking noSubmit");
 
-		/**
-		* ## noReset
-		*
-		* When user clicks reset, form is reset to null state.
-		*/
-	    .directive('noReset', ['$rootScope', function($rootScope){
-	    	return {
-	    		restrict: "A",
-	    		require: "^form",
-	    		link: function(scope, el, attr, ctrl){
-	    			function _reset(form){
-	    				$rootScope.$broadcast("noReset::click");
-	    				form.$setPristine();
-	    				$rootScope.$broadcast("no::validate:reset");
-	    			}
-	    			el.bind('click', _reset.bind(null, ctrl));
-	    		}
-	    	};
-	    }])
+				function _submit(form, e) {
+					e.preventDefault();
+					if (!form) {
+						form = new NoFormValidate(el);
+					}
 
-		.directive("noEnterKey",[function(){
-			function _enterPressed(el, scope, attr){
-				el.bind("keypress", function(e){
-					var keyCode = e.which || e.keyCode;
+					if (form.$valid) {
+						$rootScope.$broadcast("noSubmit::dataReady", el, scope);
+					} else {
+						$rootScope.$broadcast("no::validate", form.$valid);
+					}
+				}
 
-					if(keyCode === 13) //Enter is pressed
-					{
-					  var frm = el.closest("[no-form]");
+				var tmp = _submit.bind(null, form);
+				el.click(tmp);
+			}
+		};
+	}])
 
-						frm.find("[no-submit]").click(); //Assume that it is a button
+	/**
+	 * ## noReset
+	 *
+	 * When user clicks reset, form is reset to null state.
+	 */
+	.directive('noReset', ['$rootScope', function($rootScope) {
+		return {
+			restrict: "A",
+			require: "?^^form",
+			scope: false,
+			link: function(scope, el, attr, ctrl) {
+				var rsetKey = "noReset_" + attr.noReset;
+
+				scope.$watch(attr.noReset, function(n, o, s) {
+					if (n) {
+						scope[rsetKey] = angular.copy(scope[attr.noReset]);
 					}
 				});
+
+				function _reset(form, e) {
+					e.preventDefault();
+					if (!form) {
+						form = new NoFormValidate(el);
+					}
+
+					scope[attr.noReset] = scope[rsetKey];
+					scope.$digest();
+
+					$rootScope.$broadcast("noReset::click");
+					form.$setPristine();
+					$rootScope.$broadcast("no::validate:reset");
+				}
+				el.bind('click', _reset.bind(null, ctrl));
 			}
+		};
+	}])
 
-			function _link(scope, el, attr){
-				console.warn("This will be refactored into a different module in a future release");
-				_enterPressed(el,scope);
-			}
+	.directive("noEnterKey", [function() {
+		function _enterPressed(el, scope, attr) {
+			el.bind("keypress", function(e) {
+				var keyCode = e.which || e.keyCode;
 
-			var directive = {
-					restrict: "A",
-					link: _link
-				};
+				if (keyCode === 13) //Enter is pressed
+				{
+					var frm = el.closest("[no-form]");
 
-			return directive;
-		}])
+					frm.find("[no-submit]").click(); //Assume that it is a button
+				}
+			});
+		}
+
+		function _link(scope, el, attr) {
+			console.warn("This will be refactored into a different module in a future release");
+			_enterPressed(el, scope);
+		}
+
+		var directive = {
+			restrict: "A",
+			link: _link
+		};
+
+		return directive;
+	}])
 
 	;
 })(angular);
