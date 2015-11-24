@@ -85,7 +85,10 @@
 				//controller: [function(){}],
 				//transclude: true,
 				scope: false,
-				link: function(scope, el, attrs) {
+				require: "?^form",
+				link: function(scope, el, attrs, form, $t) {
+					scope.$validator = form;
+
 					noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
 						.then(function(config) {
 							var noForm = config.noForm,
@@ -114,7 +117,7 @@
 
 								noTrans.upsert(data)
 									.then(function(result) {
-										_growl("yeah");  //TODO: refactor _grown into a service.
+										_growl("yeah"); //TODO: refactor _grown into a service.
 										noTransactionCache.endTransaction(noTrans);
 										scope.$emit("noSubmit::success");
 									})

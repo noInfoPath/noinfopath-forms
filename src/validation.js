@@ -98,101 +98,100 @@
 			};
 		}])
 
-	/**
-	 * ## noSubmit
-	 *
-	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
-	 */
-	.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
-		return {
-			restrict: "A",
-			require: "?^^form",
-			scope: false,
-			link: function(scope, el, attr, form) {
-				console.info("Linking noSubmit");
-
-				function _submit(form, e) {
-					e.preventDefault();
+		/**
+		 * ## noSubmit
+		 *
+		 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+		 */
+		.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+			return {
+				restrict: "A",
+				require: "?^form",
+				link: function(scope, el, attr, form) {
+					console.info("Linking noSubmit");
 					if (!form) {
 						form = new NoFormValidate(el);
 					}
 
-					if (form.$valid) {
-						$rootScope.$broadcast("noSubmit::dataReady", el, scope);
-					} else {
-						$rootScope.$broadcast("no::validate", form.$valid);
+					function _submit(form, e) {
+						e.preventDefault();
+
+						if (form.$valid) {
+							$rootScope.$broadcast("noSubmit::dataReady", el, scope);
+						} else {
+							$rootScope.$broadcast("no::validate", form.$valid);
+						}
 					}
+
+					var tmp = _submit.bind(null, form);
+					el.click(tmp);
 				}
+			};
+		}])
 
-				var tmp = _submit.bind(null, form);
-				el.click(tmp);
-			}
-		};
-	}])
+		/**
+		 * ## noReset
+		 *
+		 * When user clicks reset, form is reset to null state.
+		 */
+		.directive('noReset', ['$rootScope', function($rootScope) {
+			return {
+				restrict: "A",
+				require: "?^^form",
+				scope: false,
+				link: function(scope, el, attr, ctrl) {
+					var rsetKey = "noReset_" + attr.noReset;
 
-	/**
-	 * ## noReset
-	 *
-	 * When user clicks reset, form is reset to null state.
-	 */
-	.directive('noReset', ['$rootScope', function($rootScope) {
-		return {
-			restrict: "A",
-			require: "?^^form",
-			scope: false,
-			link: function(scope, el, attr, ctrl) {
-				var rsetKey = "noReset_" + attr.noReset;
+					scope.$watch(attr.noReset, function(n, o, s) {
+						if (n) {
+							scope[rsetKey] = angular.copy(scope[attr.noReset]);
+						}
+					});
 
-				scope.$watch(attr.noReset, function(n, o, s) {
-					if (n) {
-						scope[rsetKey] = angular.copy(scope[attr.noReset]);
+					function _reset(form, e) {
+						e.preventDefault();
+						if (!form) {
+							form = new NoFormValidate(el);
+						}
+
+						scope[attr.noReset] = scope[rsetKey];
+						scope.$digest();
+
+						$rootScope.$broadcast("noReset::click");
+						form.$setPristine();
+						$rootScope.$broadcast("no::validate:reset");
+					}
+					el.bind('click', _reset.bind(null, ctrl));
+				}
+			};
+		}])
+
+		.directive("noEnterKey", [function() {
+			function _enterPressed(el, scope, attr) {
+				el.bind("keypress", function(e) {
+					var keyCode = e.which || e.keyCode;
+
+					if (keyCode === 13) //Enter is pressed
+					{
+						var frm = el.closest("[no-form]");
+
+						frm.find("[no-submit]").click(); //Assume that it is a button
 					}
 				});
-
-				function _reset(form, e) {
-					e.preventDefault();
-					if (!form) {
-						form = new NoFormValidate(el);
-					}
-
-					scope[attr.noReset] = scope[rsetKey];
-					scope.$digest();
-
-					$rootScope.$broadcast("noReset::click");
-					form.$setPristine();
-					$rootScope.$broadcast("no::validate:reset");
-				}
-				el.bind('click', _reset.bind(null, ctrl));
 			}
-		};
-	}])
 
-	.directive("noEnterKey", [function() {
-		function _enterPressed(el, scope, attr) {
-			el.bind("keypress", function(e) {
-				var keyCode = e.which || e.keyCode;
+			function _link(scope, el, attr) {
+				console.warn("This will be refactored into a different module in a future release");
+				_enterPressed(el, scope);
+			}
 
-				if (keyCode === 13) //Enter is pressed
-				{
-					var frm = el.closest("[no-form]");
+			var directive = {
+				restrict: "A",
+				link: _link
+			};
 
-					frm.find("[no-submit]").click(); //Assume that it is a button
-				}
-			});
-		}
-
-		function _link(scope, el, attr) {
-			console.warn("This will be refactored into a different module in a future release");
-			_enterPressed(el, scope);
-		}
-
-		var directive = {
-			restrict: "A",
-			link: _link
-		};
-
-		return directive;
-	}])
+			return directive;
+		}])
 
 	;
 })(angular);

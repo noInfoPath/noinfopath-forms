@@ -10,6 +10,7 @@ module.exports = function(grunt) {
 				src: [
 					'src/globals.js',
 					'src/forms.js',
+					'src/navigation.js',
 					'src/validation.js',
 					'src/form-config.js'
 				],
