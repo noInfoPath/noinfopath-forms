@@ -85,19 +85,22 @@
 				//controller: [function(){}],
 				//transclude: true,
 				scope: false,
-				link: function(scope, el, attrs) {
+				require: "?^form",
+				link: function(scope, el, attrs, form, $t) {
+					scope.$validator = form;
+
 					noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-						.then(function(config){
+						.then(function(config) {
 							var noForm = config.noForm,
 								primaryComponent;
-								/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+							/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
 
 
-							for(var c in config.noComponents){
+							for (var c in config.noComponents) {
 								var comp = config.noComponents[c];
 
-								if(comp.scopeKey){
-									if(config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)){
+								if (comp.scopeKey) {
+									if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
 										scope.waitingFor[comp.scopeKey] = true;
 									}
 
@@ -113,11 +116,12 @@
 									data = scope[entityName];
 
 								noTrans.upsert(data)
-									.then(function(result){
-										_growl("yeah");
+									.then(function(result) {
+										_growl("yeah"); //TODO: refactor _grown into a service.
 										noTransactionCache.endTransaction(noTrans);
+										scope.$emit("noSubmit::success");
 									})
-									.catch(function(err){
+									.catch(function(err) {
 										console.error(err);
 										_growl("boo");
 									});
@@ -132,11 +136,10 @@
 						boo: false
 					};
 
-					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval){
+					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval) {
 						var stillWaiting = false;
-						for(var w in scope.waitingFor)
-						{
-							if(scope.waitingFor[w]){
+						for (var w in scope.waitingFor) {
+							if (scope.waitingFor[w]) {
 								stillWaiting = true;
 								break;
 							}
@@ -144,7 +147,7 @@
 
 						scope.noFormReady = !stillWaiting;
 
-						if(scope.noFormReady) releaseWaitingFor();
+						if (scope.noFormReady) releaseWaitingFor();
 
 					});
 
