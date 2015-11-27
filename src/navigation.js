@@ -46,6 +46,9 @@
 						if (route) $state.go(route, params);
 
 					},
+					"kendo-new-row": function(){
+						scope.noGrid.addRow();
+					},
 					"undo": function() {
 						noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
 					},
@@ -55,7 +58,7 @@
 
 			function saveConfig(c) {
 				config = c;
-				console.log(config);
+				//console.log(config);
 				return $q.when(config);
 			}
 

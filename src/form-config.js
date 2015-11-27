@@ -46,21 +46,34 @@
 									for (var f in forms) {
 										var frm = forms[f];
 
-										if (f === "editors") {
-											for (var e in frm) {
-												var editor = frm[e];
+										switch(f){
+											case "editors":
+												for (var e in frm) {
+													var editor = frm[e];
 
-												editor.search.shortName = "search_" + e;
-												editor.search.routeToken = e;
-												promises.push(dataSource.create(editor.search));
+													editor.search.shortName = "search_" + e;
+													editor.search.routeToken = e;
+													promises.push(dataSource.create(editor.search));
 
-												editor.edit.shortName = "edit_" + e;
-												editor.edit.routeToken = e;
-												promises.push(dataSource.create(editor.edit));
-											}
-										} else {
-											frm.shortName = f;
-											promises.push(dataSource.create(frm));
+													editor.edit.shortName = "edit_" + e;
+													editor.edit.routeToken = e;
+													promises.push(dataSource.create(editor.edit));
+												}
+												break;
+											case "lookups":
+												for (var g in frm) {
+													var refed = frm[g];
+
+													refed.shortName = "lookup_" + g;
+													refed.routeToken = g;
+													promises.push(dataSource.create(refed));
+
+												}
+												break;
+											default:
+												frm.shortName = f;
+												promises.push(dataSource.create(frm));
+												break;
 										}
 									}
 

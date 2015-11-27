@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.3
+* @version 1.0.4
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -183,7 +183,69 @@
 
 				}
 			};
-		}]);
+		}])
+
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state){
+			function _link(scope, el, attrs){
+
+				function getTemplate(){
+					var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+
+					//console.log(scope.noRecordStatsTemplate);
+
+					if(scope.noRecordStatsTemplate){
+						return $q.when(scope.noRecordStatsTemplate);
+					}else{
+						return $q(function(resolve, reject){
+							$http.get(url)
+								.then(function(resp){
+									scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+									resolve(scope.noRecordStatsTemplate);
+								})
+								.catch(function(err){
+									console.log(err);
+									reject(err);
+								});
+						});
+					}
+				}
+
+				function _finish(config){
+					if(!config) throw "Form configuration not found for route " + $state.params.entity;
+
+					getTemplate()
+						.then(function(template){
+							var t = $compile(template)(scope);
+							console.log(t);
+							el.html(t);
+						})
+						.catch(function(err){
+							console.error(err);
+						});
+				}
+
+				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+					.then(_finish)
+					.catch(function(err){
+						console.error(err);
+					});
+			}
+
+
+
+			var directive = {
+				restrict: "E",
+				link: _link
+
+			};
+
+			return directive;
+
+		}])
+
+
+		;
+
 
 })(angular);
 
@@ -235,6 +297,9 @@
 						if (route) $state.go(route, params);
 
 					},
+					"kendo-new-row": function(){
+						scope.noGrid.addRow();
+					},
 					"undo": function() {
 						noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
 					},
@@ -244,7 +309,7 @@
 
 			function saveConfig(c) {
 				config = c;
-				console.log(config);
+				//console.log(config);
 				return $q.when(config);
 			}
 
@@ -629,21 +694,34 @@
 									for (var f in forms) {
 										var frm = forms[f];
 
-										if (f === "editors") {
-											for (var e in frm) {
-												var editor = frm[e];
+										switch(f){
+											case "editors":
+												for (var e in frm) {
+													var editor = frm[e];
 
-												editor.search.shortName = "search_" + e;
-												editor.search.routeToken = e;
-												promises.push(dataSource.create(editor.search));
+													editor.search.shortName = "search_" + e;
+													editor.search.routeToken = e;
+													promises.push(dataSource.create(editor.search));
 
-												editor.edit.shortName = "edit_" + e;
-												editor.edit.routeToken = e;
-												promises.push(dataSource.create(editor.edit));
-											}
-										} else {
-											frm.shortName = f;
-											promises.push(dataSource.create(frm));
+													editor.edit.shortName = "edit_" + e;
+													editor.edit.routeToken = e;
+													promises.push(dataSource.create(editor.edit));
+												}
+												break;
+											case "lookups":
+												for (var g in frm) {
+													var refed = frm[g];
+
+													refed.shortName = "lookup_" + g;
+													refed.routeToken = g;
+													promises.push(dataSource.create(refed));
+
+												}
+												break;
+											default:
+												frm.shortName = f;
+												promises.push(dataSource.create(frm));
+												break;
 										}
 									}
 
