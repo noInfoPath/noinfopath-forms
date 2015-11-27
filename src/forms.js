@@ -167,6 +167,68 @@
 
 				}
 			};
-		}]);
+		}])
+
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state){
+			function _link(scope, el, attrs){
+
+				function getTemplate(){
+					var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+
+					//console.log(scope.noRecordStatsTemplate);
+
+					if(scope.noRecordStatsTemplate){
+						return $q.when(scope.noRecordStatsTemplate);
+					}else{
+						return $q(function(resolve, reject){
+							$http.get(url)
+								.then(function(resp){
+									scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+									resolve(scope.noRecordStatsTemplate);
+								})
+								.catch(function(err){
+									console.log(err);
+									reject(err);
+								});
+						});
+					}
+				}
+
+				function _finish(config){
+					if(!config) throw "Form configuration not found for route " + $state.params.entity;
+
+					getTemplate()
+						.then(function(template){
+							var t = $compile(template)(scope);
+							console.log(t);
+							el.html(t);
+						})
+						.catch(function(err){
+							console.error(err);
+						});
+				}
+
+				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+					.then(_finish)
+					.catch(function(err){
+						console.error(err);
+					});
+			}
+
+
+
+			var directive = {
+				restrict: "E",
+				link: _link
+
+			};
+
+			return directive;
+
+		}])
+
+
+		;
+
 
 })(angular);
