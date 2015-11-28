@@ -23,9 +23,10 @@
 					},
 					"back": function() {
 						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
-							params = {
-								entity: $state.params.entity
-							};
+						// params = {
+						// 	entity: $state.params.entity
+						// };
+						params = scope.noNav[route];
 
 						$state.go(route, params);
 					},

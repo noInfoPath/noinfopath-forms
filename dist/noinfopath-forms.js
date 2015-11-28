@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.4
+* @version 1.0.5
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -274,9 +274,10 @@
 					},
 					"back": function() {
 						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
-							params = {
-								entity: $state.params.entity
-							};
+						// params = {
+						// 	entity: $state.params.entity
+						// };
+						params = scope.noNav[route];
 
 						$state.go(route, params);
 					},
