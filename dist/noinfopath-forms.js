@@ -1,11 +1,11 @@
 /**
- * # noinfopath.forms
- * @version 1.0.5
- *
- * Combines the functionality of validation from bootstrap and angular.
- *
- */
-(function(angular, undefined) {
+* # noinfopath.forms
+* @version 1.0.6
+*
+* Combines the functionality of validation from bootstrap and angular.
+*
+*/
+	(function(angular,undefined){
 	"use strict";
 
 
@@ -185,66 +185,66 @@
 			};
 		}])
 
-	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
-		function _link(scope, el, attrs) {
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state){
+			function _link(scope, el, attrs){
 
-			function getTemplate() {
-				var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+				function getTemplate(){
+					var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
 
-				//console.log(scope.noRecordStatsTemplate);
+					//console.log(scope.noRecordStatsTemplate);
 
-				if (scope.noRecordStatsTemplate) {
-					return $q.when(scope.noRecordStatsTemplate);
-				} else {
-					return $q(function(resolve, reject) {
-						$http.get(url)
-							.then(function(resp) {
-								scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
-								resolve(scope.noRecordStatsTemplate);
-							})
-							.catch(function(err) {
-								console.log(err);
-								reject(err);
-							});
-					});
+					if(scope.noRecordStatsTemplate){
+						return $q.when(scope.noRecordStatsTemplate);
+					}else{
+						return $q(function(resolve, reject){
+							$http.get(url)
+								.then(function(resp){
+									scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+									resolve(scope.noRecordStatsTemplate);
+								})
+								.catch(function(err){
+									console.log(err);
+									reject(err);
+								});
+						});
+					}
 				}
-			}
 
-			function _finish(config) {
-				if (!config) throw "Form configuration not found for route " + $state.params.entity;
+				function _finish(config){
+					if(!config) throw "Form configuration not found for route " + $state.params.entity;
 
-				getTemplate()
-					.then(function(template) {
-						var t = $compile(template)(scope);
-						console.log(t);
-						el.html(t);
-					})
-					.catch(function(err) {
+					getTemplate()
+						.then(function(template){
+							var t = $compile(template)(scope);
+							console.log(t);
+							el.html(t);
+						})
+						.catch(function(err){
+							console.error(err);
+						});
+				}
+
+				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+					.then(_finish)
+					.catch(function(err){
 						console.error(err);
 					});
 			}
 
-			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-				.then(_finish)
-				.catch(function(err) {
-					console.error(err);
-				});
-		}
 
 
+			var directive = {
+				restrict: "E",
+				link: _link
 
-		var directive = {
-			restrict: "E",
-			link: _link
+			};
 
-		};
+			return directive;
 
-		return directive;
-
-	}])
+		}])
 
 
-	;
+		;
 
 
 })(angular);
@@ -294,6 +294,7 @@
 							params.entity = $state.params.entity;
 							params.id = "";
 						}
+
 						//console.log(route, params);
 						if (route) $state.go(route, params);
 
@@ -320,8 +321,8 @@
 
 				if (!navFn) navFn = navFns["undefined"];
 
-				navFn(config.noNavBar.routes[navFnKey], $state.params);
-
+				//navFn(config.noNavBar.routes[navFnKey], $state.params);
+				navFn();
 			}
 
 			function finish() {
@@ -348,7 +349,10 @@
 	.directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
 		var routeNames = {
 				search: "vd.entity.search",
-				edit: "vd.entity.edit"
+				edit: "vd.entity.edit",
+				trialSummary: "vd.observations.trialplot",
+				observationsEdit: "vd.observations.editor",
+				observationsNew: "vd.observations.new"
 			},
 			navNames = {
 				search: "search",
@@ -361,37 +365,17 @@
 
 			function saveConfig(c) {
 				config = c;
-				console.log(config);
+				//console.log(config);
 				return $q.when(config);
 			}
 
 			function getTemplate() {
 
-				function templateKey(stateName) {
-					if (!stateName) throw "stateName is a required parameter";
-
-					var navBar = "";
-
-					switch (stateName) {
-						case routeNames.search:
-							navBar = navNames.search;
-							break;
-						case routeNames.edit:
-							navBar = navNames.edit;
-							break;
-						default:
-							navBar = navNames.basic;
-							break;
-					}
-
-					return navBar;
-				}
-
 				function templateUrl(tplKey) {
-					return "no-navbar-" + tplKey + ".tpl.html";
+					return "navbars/no-navbar-" + tplKey + ".tpl.html";
 				}
 
-				var tplKey = templateKey($state.current.name),
+				var tplKey = noFormConfig.navBarKeyFromState($state.current.name),
 					tplUrl = templateUrl(tplKey);
 
 				return $http.get(tplUrl)
@@ -404,19 +388,19 @@
 						html = $compile(html)(scope);
 						el.html(html);
 						return;
+					})
+					.catch(function(err) {
+						if (err.status === 404) {
+							throw "noFormConfig could not locate the file `navbars/no-nav-bar.json`.";
+						} else {
+							throw err;
+						}
 					});
 
 			}
 
 			function finish() {
-
-
-				var cnb = noFormConfig.navBarNameFromState($state.current.name, $state.params.id);
-
-
-				noFormConfig.showNavBar(cnb);
-
-				return;
+				noFormConfig.showNavBar();
 			}
 
 			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
@@ -461,12 +445,8 @@
 
 		h.toggleClass("ng-hide", field.$valid || field.$pristine);
 		if (t.length > 0) {
-			t.closest("div")
-				.parent()
-				.toggleClass("has-error", field.$invalid);
-			t.closest("div")
-				.parent()
-				.toggleClass("has-success", field.$invalid);
+			t.closest("div").parent().toggleClass("has-error", field.$invalid);
+			t.closest("div").parent().toggleClass("has-success", field.$invalid);
 			t.toggleClass("has-error", field.$invalid);
 			t.toggleClass("has-success", field.$valid);
 		} else {
@@ -477,8 +457,7 @@
 
 
 	function _resetErrors(el, field) {
-		el.find(".help-block")
-			.toggleClass("ng-hide", true);
+		el.find(".help-block").toggleClass("ng-hide", true);
 		el.toggleClass("has-error", false);
 		el.toggleClass("has-success", false);
 	}
@@ -498,27 +477,23 @@
 		Object.defineProperties(this, {
 			"$valid": {
 				"get": function() {
-					return el.closest("[ng-form]")
-						.hasClass("ng-valid");
+					return el.closest("[ng-form]").hasClass("ng-valid");
 				}
 			},
 			"$invalid": {
 				"get": function() {
-					return el.closest("[ng-form]")
-						.hasClass("ng-invalid");
+					return el.closest("[ng-form]").hasClass("ng-invalid");
 				}
 			},
 			"$pristine": {
 				"get": function() {
-					return el.closest("[ng-form]")
-						.hasClass("ng-pristine");
+					return el.closest("[ng-form]").hasClass("ng-pristine");
 				}
 			}
 		});
 
 		this.$setPristine = function() {
-			el.closest("[ng-form]")
-				.addClass("ng-pristine");
+			el.closest("[ng-form]").addClass("ng-pristine");
 
 		};
 	}
@@ -558,101 +533,100 @@
 			};
 		}])
 
-	/**
-	 * ## noSubmit
-	 *
-	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
-	 */
-	.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
-		return {
-			restrict: "A",
-			require: "?^form",
-			link: function(scope, el, attr, form) {
-				console.info("Linking noSubmit");
-				if (!form) {
-					form = new NoFormValidate(el);
-				}
-
-				function _submit(form, e) {
-					e.preventDefault();
-
-					if (form.$valid) {
-						$rootScope.$broadcast("noSubmit::dataReady", el, scope);
-					} else {
-						$rootScope.$broadcast("no::validate", form.$valid);
-					}
-				}
-
-				var tmp = _submit.bind(null, form);
-				el.click(tmp);
-			}
-		};
-	}])
-
-	/**
-	 * ## noReset
-	 *
-	 * When user clicks reset, form is reset to null state.
-	 */
-	.directive('noReset', ['$rootScope', function($rootScope) {
-		return {
-			restrict: "A",
-			require: "?^^form",
-			scope: false,
-			link: function(scope, el, attr, ctrl) {
-				var rsetKey = "noReset_" + attr.noReset;
-
-				scope.$watch(attr.noReset, function(n, o, s) {
-					if (n) {
-						scope[rsetKey] = angular.copy(scope[attr.noReset]);
-					}
-				});
-
-				function _reset(form, e) {
-					e.preventDefault();
+		/**
+		 * ## noSubmit
+		 *
+		 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+		 */
+		.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+			return {
+				restrict: "A",
+				require: "?^form",
+				link: function(scope, el, attr, form) {
+					console.info("Linking noSubmit");
 					if (!form) {
 						form = new NoFormValidate(el);
 					}
 
-					scope[attr.noReset] = scope[rsetKey];
-					scope.$digest();
+					function _submit(form, e) {
+						e.preventDefault();
 
-					$rootScope.$broadcast("noReset::click");
-					form.$setPristine();
-					$rootScope.$broadcast("no::validate:reset");
+						if (form.$valid) {
+							$rootScope.$broadcast("noSubmit::dataReady", el, scope);
+						} else {
+							$rootScope.$broadcast("no::validate", form.$valid);
+						}
+					}
+
+					var tmp = _submit.bind(null, form);
+					el.click(tmp);
 				}
-				el.bind('click', _reset.bind(null, ctrl));
+			};
+		}])
+
+		/**
+		 * ## noReset
+		 *
+		 * When user clicks reset, form is reset to null state.
+		 */
+		.directive('noReset', ['$rootScope', function($rootScope) {
+			return {
+				restrict: "A",
+				require: "?^^form",
+				scope: false,
+				link: function(scope, el, attr, ctrl) {
+					var rsetKey = "noReset_" + attr.noReset;
+
+					scope.$watch(attr.noReset, function(n, o, s) {
+						if (n) {
+							scope[rsetKey] = angular.copy(scope[attr.noReset]);
+						}
+					});
+
+					function _reset(form, e) {
+						e.preventDefault();
+						if (!form) {
+							form = new NoFormValidate(el);
+						}
+
+						scope[attr.noReset] = scope[rsetKey];
+						scope.$digest();
+
+						$rootScope.$broadcast("noReset::click");
+						form.$setPristine();
+						$rootScope.$broadcast("no::validate:reset");
+					}
+					el.bind('click', _reset.bind(null, ctrl));
+				}
+			};
+		}])
+
+		.directive("noEnterKey", [function() {
+			function _enterPressed(el, scope, attr) {
+				el.bind("keypress", function(e) {
+					var keyCode = e.which || e.keyCode;
+
+					if (keyCode === 13) //Enter is pressed
+					{
+						var frm = el.closest("[no-form]");
+
+						frm.find("[no-submit]").click(); //Assume that it is a button
+					}
+				});
 			}
-		};
-	}])
 
-	.directive("noEnterKey", [function() {
-		function _enterPressed(el, scope, attr) {
-			el.bind("keypress", function(e) {
-				var keyCode = e.which || e.keyCode;
+			function _link(scope, el, attr) {
+				console.warn("This will be refactored into a different module in a future release");
+				_enterPressed(el, scope);
+			}
 
-				if (keyCode === 13) //Enter is pressed
-				{
-					var frm = el.closest("[no-form]");
+			var directive = {
+				restrict: "A",
+				link: _link
+			};
 
-					frm.find("[no-submit]")
-						.click(); //Assume that it is a button
-				}
-			});
-		}
-
-		function _link(scope, el, attr) {
-			console.warn("This will be refactored into a different module in a future release");
-			_enterPressed(el, scope);
-		}
-
-		var directive = {
-			restrict: "A",
-			link: _link
-		};
-
-		return directive;
-	}])
+			return directive;
+		}])
 
 	;
 })(angular);
@@ -662,15 +636,17 @@
 	"use strict";
 
 	angular.module("noinfopath.forms")
-		.service("noFormConfig", ["$q", "$http", "$rootScope", "noDataSource", "noLocalStorage", function($q, $http, $rootScope, noDataSource, noLocalStorage) {
-			var isDbPopulated = noLocalStorage.getItem("dbPopulated_NoInfoPath_dtc_v1"),
+		.service("noFormConfig", ["$q", "$http", "$rootScope", "$state", "noDataSource", "noLocalStorage", function($q, $http, $rootScope, $state, noDataSource, noLocalStorage) {
+			var SELF = this,
+				isDbPopulated = noLocalStorage.getItem("dbPopulated_NoInfoPath_dtc_v1"),
 				dsConfig = {
 					"dataProvider": "noIndexedDb",
 					"databaseName": "NoInfoPath_dtc_v1",
 					"entityName": "NoInfoPath_Forms",
 					"primaryKey": "FormID"
 				},
-				dataSource;
+				dataSource,
+				noNavBarConfig = {};
 
 			this.navBarNames = {
 				BASIC: "basic",
@@ -690,9 +666,7 @@
 				this.showNavBar(this.navBarNames.READONLY);
 			}.bind(this));
 
-			this.whenReady = function() {
-				dataSource = noDataSource.create(dsConfig, $rootScope);
-
+			function getFormConfig() {
 				return $q(function(resolve, reject) {
 
 					$http.get("/no-forms.json")
@@ -756,9 +730,43 @@
 								reject(err);
 							}
 						});
-
-
 				});
+			}
+
+			function getNavBarConfig() {
+				noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
+
+				if (!noNavBarConfig) {
+					noNavBarConfig = $q(function(resolve, reject) {
+						$http.get("navbars/no-nav-bar.json")
+							.then(function(resp) {
+								noNavBarConfig = resp.data;
+								noLocalStorage.setItem("no-nav-bar", noNavBarConfig);
+								resolve(noNavBarConfig);
+							})
+							.catch(reject);
+					});
+				}
+
+				return $q.when(noNavBarConfig);
+			}
+
+			Object.defineProperties(this, {
+				"noNavBarRoutes": {
+					"get": function() {
+						return noNavBarConfig;
+					}
+				}
+			});
+
+			this.whenReady = function() {
+				dataSource = noDataSource.create(dsConfig, $rootScope);
+
+				return getFormConfig()
+					.then(getNavBarConfig)
+					.catch(function(err) {
+						console.log(err);
+					});
 			};
 
 			this.getFormByShortName = function(shortName, scope) {
@@ -818,10 +826,50 @@
 				return promise;
 			};
 
-			this.showNavBar = function(targetNavBar) {
-				if (!targetNavBar) throw "targetNavBar is a required parameter";
 
-				var el = angular.element("no-form, .no-search");
+			function navBarRoute(stateName) {
+				var route = SELF.noNavBarRoutes[stateName];
+
+				route = route ? route : SELF.noNavBarRoutes[undefined];
+
+				return route;
+			}
+
+
+			function navBarEntityIDFromState(route, params) {
+				var id;
+
+				if (route.entityIdParam) {
+					id = params[route.entityIdParam];
+				}
+
+				return id;
+			}
+
+			function navBarNameFromState(state) {
+				if (!state) throw "state is a required parameter";
+
+				var route = navBarRoute(state.current.name),
+					navBar = SELF.navBarKeyFromState(state.current.name),
+					id = navBarEntityIDFromState(route, state.params);
+
+				if (navBar === "edit") navBar = id ? "readonly" : "create";
+
+				return navBar;
+			}
+			this.navBarKeyFromState = function(stateName) {
+				var navBarKey = navBarRoute(stateName)
+					.type;
+
+				return navBarKey;
+			};
+
+			this.showNavBar = function(navBarName) {
+				//if (!navBarKey) throw "navBarKey is a required parameter";
+
+				var targetNavBar = navBarName ? navBarName : navBarNameFromState($state);
+
+				var el = angular.element(".has-button-bar");
 				el.find("[no-navbar]")
 					.addClass("ng-hide");
 				el.find("[no-navbar='" + targetNavBar + "']")
@@ -839,28 +887,6 @@
 							.addClass("ng-hide");
 						break;
 				}
-
 			};
-
-			this.navBarNameFromState = function(stateName, id) {
-				if (!stateName) throw "stateName is a required parameter";
-
-				var navBar = "";
-
-				switch (stateName) {
-					case "vd.entity.search":
-						navBar = "search";
-						break;
-					case "vd.entity.edit":
-						navBar = id ? "readonly" : "create";
-						break;
-					default:
-						navBar = "basic";
-						break;
-				}
-
-				return navBar;
-			};
-
 		}]);
 })(angular);
