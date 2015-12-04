@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.6
+* @version 1.0.7
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -252,8 +252,13 @@
 //navigation.js
 (function(angular, undefined) {
 	"use strict";
+	var stateProvider;
 
 	angular.module("noinfopath.forms")
+		.config(["$stateProvider", function($stateProvider){
+			stateProvider = $stateProvider;
+		}])
+
 		.run(["$rootScope", function($rootScope) {
 			$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
 				//console.log("$stateChangeSuccess");
@@ -430,6 +435,36 @@
 		};
 	}])
 
+	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state){
+		this.configure = function(){
+			return $q(function(resolve, reject){
+				var routes;
+
+				function saveRoutes(resp){
+					routes = resp.data;
+
+					return $q.when(true);
+				}
+
+				function configureStates(){
+					for(var r in routes){
+						var route = routes[r];
+
+						route.data = { entities: {} };
+
+						stateProvider.state(route.name, route);
+					}
+
+					resolve();
+				}
+
+				$http.get("navbars/routes.json")
+					.then(saveRoutes)
+					.then(configureStates)
+					.catch(reject);
+			});
+		};
+	}])
 	;
 })(angular);
 
