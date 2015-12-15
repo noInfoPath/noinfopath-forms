@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.7
+* @version 1.0.8
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -643,7 +643,7 @@
 
 					if (keyCode === 13) //Enter is pressed
 					{
-						var frm = el.closest("[no-form]");
+						var frm = el.closest("[no-form], [ng-form]");
 
 						frm.find("[no-submit]").click(); //Assume that it is a button
 					}
@@ -662,6 +662,7 @@
 
 			return directive;
 		}])
+
 
 	;
 })(angular);
