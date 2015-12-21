@@ -44,12 +44,14 @@
 
 						params = params ? params : {};
 
+						params.entity = $state.params.entity;
+
 						if (attrs.noNav === "new" && route == "vd.entity.edit") {
-							params.entity = $state.params.entity;
 							params.id = "";
+						} else {
+							params = $state.params;
 						}
 
-						//console.log(route, params);
 						if (route) $state.go(route, params);
 
 					},
@@ -199,7 +201,9 @@
 					for(var r in routes){
 						var route = routes[r];
 
-						route.data = { entities: {} };
+						route.data = angular.extend({
+                            entities: {}
+                        }, route.data);
 
 						stateProvider.state(route.name, route);
 					}
