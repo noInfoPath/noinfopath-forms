@@ -1,929 +1,931 @@
 /**
- * # noinfopath.forms
- * @version 1.0.8
- *
- * Combines the functionality of validation from bootstrap and angular.
- *
- */
-(function(angular, undefined) {
-    "use strict";
+* # noinfopath.forms
+* @version 1.0.9
+*
+* Combines the functionality of validation from bootstrap and angular.
+*
+*/
+	(function(angular,undefined){
+	"use strict";
 
 
-    angular.module("noinfopath.forms", ["noinfopath"])
+	angular.module("noinfopath.forms", ["noinfopath"])
 
-    ;
+	;
 })(angular);
 
 //forms.js
 (function(angular, undefined) {
-    "use strict";
+	"use strict";
 
-    angular.module("noinfopath.forms")
-        /*
-         *	## noForm : Directive
-         *
-         *	> NOTE: This directive requires a parent element that is decorated with an `ng-form` directive.
-         *
-         *	### Attributes
-         *
-         *	|Name|Description|
-         *	|----|-----------|
-         *	|no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
-         *	|no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
-         *	|no-database|The location of the Tables or Collections that this form will read and write to.|
-         *	|no-datasource|The name of a table, view or collection contained in the database. The data source must expose a NoCRUD interface.|
-         *
-         *	##### Usage
-         *
-         *  ```html
-         *
-         *	<div no-form no-provider="noIndexedDB" no-database="FCFNv2" no-datasoure="Cooperator">
-         *		... other form elements ...
-         *	</div>
-         *
-         *  ```
-         *   OR
-         *
-         *  ```html
-         *
-         *  <div no-form="myform">
-         *		... other form elements ...
-         *	</div>
-         *
-         *  ```
-         *
-         *	### NoInfoPath Form Configuration
-         *
-         *  When a NoInfoPath Form Configuration is used, it defines the semantics of
-         *	how data is read and written by the form. The following is an
-         *	example of how the configuration object is defined. Note that when
-         *	datasource is a `String` that it is the name of an entity on the
-         *	database.  When an obect it is instructions on how to proccess
-         *	multi-table relationships represented by the form.
-         *
-         *
-         *	##### Sample NoInfoPath Form Configuration
-         *
-         *	```json
-         *	{
-         *		"myform": {
-         *			"provider": "noWebSQL",
-         *			"database": "FCFNv3",
-         *			"datasource": {
-         *				"create": [
-         *					"Cooperators",
-         *					"Addresses",
-         *					"CooperatorAddresses":
-         *					[
-         *						"Cooperators",
-         *						"Addresses"
-         *					]
-         *
-         * 				],
-         *				"read": "vwCooperator",
-         *				"update": [
-         *					"Cooperators",
-         *					"Addresses"
-         * 				],
-         *				"destroy": [
-         *					"CooperatorAddresses",
-         *					"Cooperators",
-         *					"Addresses"
-         * 				]
-         * 			}
-         *		}
-         *	}
-         *	```
-         */
-        .directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache) {
-            return {
-                restrict: "E",
-                //controller: [function(){}],
-                //transclude: true,
-                scope: false,
-                require: "?^form",
-                link: function(scope, el, attrs, form, $t) {
-                    scope.$validator = form;
+	angular.module("noinfopath.forms")
+		/*
+		 *	## noForm : Directive
+		 *
+		 *	> NOTE: This directive requires a parent element that is decorated with an `ng-form` directive.
+		 *
+		 *	### Attributes
+		 *
+		 *	|Name|Description|
+		 *	|----|-----------|
+		 *	|no-form|When `Undefined` configuration comes from the other attribute added to the element. When a string is provided, it is the configuration key for accessing the form's configuration from the noConfig service.|
+		 *	|no-provider|The name of the NoInfoPath service that will provide the CRUD transport.|
+		 *	|no-database|The location of the Tables or Collections that this form will read and write to.|
+		 *	|no-datasource|The name of a table, view or collection contained in the database. The data source must expose a NoCRUD interface.|
+		 *
+		 *	##### Usage
+		 *
+		 *  ```html
+		 *
+		 *	<div no-form no-provider="noIndexedDB" no-database="FCFNv2" no-datasoure="Cooperator">
+		 *		... other form elements ...
+		 *	</div>
+		 *
+		 *  ```
+		 *   OR
+		 *
+		 *  ```html
+		 *
+		 *  <div no-form="myform">
+		 *		... other form elements ...
+		 *	</div>
+		 *
+		 *  ```
+		 *
+		 *	### NoInfoPath Form Configuration
+		 *
+		 *  When a NoInfoPath Form Configuration is used, it defines the semantics of
+		 *	how data is read and written by the form. The following is an
+		 *	example of how the configuration object is defined. Note that when
+		 *	datasource is a `String` that it is the name of an entity on the
+		 *	database.  When an obect it is instructions on how to proccess
+		 *	multi-table relationships represented by the form.
+		 *
+		 *
+		 *	##### Sample NoInfoPath Form Configuration
+		 *
+		 *	```json
+		 *	{
+		 *		"myform": {
+		 *			"provider": "noWebSQL",
+		 *			"database": "FCFNv3",
+		 *			"datasource": {
+		 *				"create": [
+		 *					"Cooperators",
+		 *					"Addresses",
+		 *					"CooperatorAddresses":
+		 *					[
+		 *						"Cooperators",
+		 *						"Addresses"
+		 *					]
+		 *
+		 * 				],
+		 *				"read": "vwCooperator",
+		 *				"update": [
+		 *					"Cooperators",
+		 *					"Addresses"
+		 * 				],
+		 *				"destroy": [
+		 *					"CooperatorAddresses",
+		 *					"Cooperators",
+		 *					"Addresses"
+		 * 				]
+		 * 			}
+		 *		}
+		 *	}
+		 *	```
+		 */
+		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache) {
+			return {
+				restrict: "E",
+				//controller: [function(){}],
+				//transclude: true,
+				scope: false,
+				require: "?^form",
+				link: function(scope, el, attrs, form, $t) {
+					scope.$validator = form;
 
-                    noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-                        .then(function(config) {
-                            var noForm = config.noForm,
-                                primaryComponent;
-                            /* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
-
-
-                            for (var c in config.noComponents) {
-                                var comp = config.noComponents[c];
-
-                                if (comp.scopeKey) {
-                                    if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
-                                        scope.waitingFor[comp.scopeKey] = true;
-                                    }
-
-                                }
-
-                            }
+					noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+						.then(function(config) {
+							var noForm = config.noForm,
+								primaryComponent;
+							/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
 
 
-                            scope.$on("noSubmit::dataReady", function(e, elm, scope) {
-                                var entityName = elm.attr("no-submit"),
-                                    comp = noForm.noComponents[entityName],
-                                    noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
-                                    data = scope[entityName];
+							for (var c in config.noComponents) {
+								var comp = config.noComponents[c];
 
-                                noTrans.upsert(data)
-                                    .then(function(result) {
-                                        _growl("yeah"); //TODO: refactor _grown into a service.
-                                        noTransactionCache.endTransaction(noTrans);
-                                        scope.$emit("noSubmit::success");
-                                    })
-                                    .catch(function(err) {
-                                        console.error(err);
-                                        _growl("boo");
-                                    });
-                            });
+								if (comp.scopeKey) {
+									if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
+										scope.waitingFor[comp.scopeKey] = true;
+									}
 
-                        });
+								}
 
-                    scope.waitingFor = {};
-                    scope.noFormReady = false;
-                    scope.noForm = {
-                        yeah: false,
-                        boo: false
-                    };
-
-                    var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval) {
-                        var stillWaiting = false;
-                        for (var w in scope.waitingFor) {
-                            if (scope.waitingFor[w]) {
-                                stillWaiting = true;
-                                break;
-                            }
-                        }
-
-                        scope.noFormReady = !stillWaiting;
-
-                        if (scope.noFormReady) releaseWaitingFor();
-
-                    });
+							}
 
 
-                    function _growl(m) {
-                        scope.noForm[m] = true;
+							scope.$on("noSubmit::dataReady", function(e, elm, scope) {
+								var entityName = elm.attr("no-submit"),
+									comp = noForm.noComponents[entityName],
+									noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
+									data = scope[entityName];
 
-                        $timeout(function() {
-                            scope.noForm = {
-                                yeah: false,
-                                boo: false
-                            };
-                        }, 5000);
+								noTrans.upsert(data)
+									.then(function(result) {
+										_growl("yeah"); //TODO: refactor _grown into a service.
+										noTransactionCache.endTransaction(noTrans);
+										scope.$emit("noSubmit::success");
+									})
+									.catch(function(err) {
+										console.error(err);
+										_growl("boo");
+									});
+							});
 
-                    }
+						});
 
+					scope.waitingFor = {};
+					scope.noFormReady = false;
+					scope.noForm = {
+						yeah: false,
+						boo: false
+					};
 
-                }
-            };
-        }])
+					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval) {
+						var stillWaiting = false;
+						for (var w in scope.waitingFor) {
+							if (scope.waitingFor[w]) {
+								stillWaiting = true;
+								break;
+							}
+						}
 
-    .directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
-        function _link(scope, el, attrs) {
+						scope.noFormReady = !stillWaiting;
 
-            function getTemplate() {
-                var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+						if (scope.noFormReady) releaseWaitingFor();
 
-                //console.log(scope.noRecordStatsTemplate);
-
-                if (scope.noRecordStatsTemplate) {
-                    return $q.when(scope.noRecordStatsTemplate);
-                } else {
-                    return $q(function(resolve, reject) {
-                        $http.get(url)
-                            .then(function(resp) {
-                                scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
-                                resolve(scope.noRecordStatsTemplate);
-                            })
-                            .catch(function(err) {
-                                console.log(err);
-                                reject(err);
-                            });
-                    });
-                }
-            }
-
-            function _finish(config) {
-                if (!config) throw "Form configuration not found for route " + $state.params.entity;
-
-                getTemplate()
-                    .then(function(template) {
-                        var t = $compile(template)(scope);
-                        console.log(t);
-                        el.html(t);
-                    })
-                    .catch(function(err) {
-                        console.error(err);
-                    });
-            }
-
-            noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-                .then(_finish)
-                .catch(function(err) {
-                    console.error(err);
-                });
-        }
+					});
 
 
+					function _growl(m) {
+						scope.noForm[m] = true;
 
-        var directive = {
-            restrict: "E",
-            link: _link
+						$timeout(function() {
+							scope.noForm = {
+								yeah: false,
+								boo: false
+							};
+						}, 5000);
 
-        };
-
-        return directive;
-
-    }])
+					}
 
 
-    ;
+				}
+			};
+		}])
+
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state){
+			function _link(scope, el, attrs){
+
+				function getTemplate(){
+					var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+
+					//console.log(scope.noRecordStatsTemplate);
+
+					if(scope.noRecordStatsTemplate){
+						return $q.when(scope.noRecordStatsTemplate);
+					}else{
+						return $q(function(resolve, reject){
+							$http.get(url)
+								.then(function(resp){
+									scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+									resolve(scope.noRecordStatsTemplate);
+								})
+								.catch(function(err){
+									console.log(err);
+									reject(err);
+								});
+						});
+					}
+				}
+
+				function _finish(config){
+					if(!config) throw "Form configuration not found for route " + $state.params.entity;
+
+					getTemplate()
+						.then(function(template){
+							var t = $compile(template)(scope);
+							el.html(t);
+						})
+						.catch(function(err){
+							console.error(err);
+						});
+				}
+
+				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+					.then(_finish)
+					.catch(function(err){
+						console.error(err);
+					});
+			}
+
+
+
+			var directive = {
+				restrict: "E",
+				link: _link
+
+			};
+
+			return directive;
+
+		}])
+
+
+		;
 
 
 })(angular);
 
 //navigation.js
 (function(angular, undefined) {
-    "use strict";
-    var stateProvider;
+	"use strict";
+	var stateProvider;
 
-    angular.module("noinfopath.forms")
-        .config(["$stateProvider", function($stateProvider) {
-            stateProvider = $stateProvider;
-        }])
+	angular.module("noinfopath.forms")
+		.config(["$stateProvider", function($stateProvider){
+			stateProvider = $stateProvider;
+		}])
 
-    .run(["$rootScope", function($rootScope) {
-        $rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
-            //console.log("$stateChangeSuccess");
-            event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
-            event.currentScope.$root.noNav[fromState.name] = fromParams;
-        });
+		.run(["$rootScope", function($rootScope) {
+			$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
+				//console.log("$stateChangeSuccess");
+				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
+				event.currentScope.$root.noNav[fromState.name] = fromParams;
+			});
 
-    }])
+		}])
 
-    .directive("noNav", ["$q", "$state", "noFormConfig", function($q, $state, noFormConfig) {
+	.directive("noNav", ["$q", "$state", "noFormConfig", function($q, $state, noFormConfig) {
 
-        function _link(scope, el, attrs) {
-            var navFns = {
-                    "home": function() {
-                        var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav);
+		function _link(scope, el, attrs) {
+			var navFns = {
+					"home": function() {
+						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav);
 
-                        $state.go(route);
-                    },
-                    "back": function() {
-                        var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
-                            // params = {
-                            // 	entity: $state.params.entity
-                            // };
-                            params = scope.noNav[route];
+						$state.go(route);
+					},
+					"back": function() {
+						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
+							// params = {
+							// 	entity: $state.params.entity
+							// };
+							params = scope.noNav[route];
 
-                        $state.go(route, params);
-                    },
-                    "writeable": function() {
-                        noFormConfig.showNavBar(noFormConfig.navBarNames.WRITEABLE);
-                    },
-                    "new": function() {
-                        var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
-                            params = scope.$root.noNav[route];
+						$state.go(route, params);
+					},
+					"writeable": function() {
+						noFormConfig.showNavBar(noFormConfig.navBarNames.WRITEABLE);
+					},
+					"new": function() {
+						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
+							params = scope.$root.noNav[route];
 
-                        params = params ? params : {};
+						params = params ? params : {};
 
-                        if (attrs.noNav === "new" && route == "vd.entity.edit") {
-                            params.entity = $state.params.entity;
-                            params.id = "";
-                        }
+						params.entity = $state.params.entity;
 
-                        //console.log(route, params);
-                        if (route) $state.go(route, params);
+						if (attrs.noNav === "new" && route == "vd.entity.edit") {
+							params.id = "";
+						} else {
+							params = $state.params;
+						}
 
-                    },
-                    "kendo-new-row": function() {
-                        scope.noGrid.addRow();
-                    },
-                    "undo": function() {
-                        noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
-                    },
-                    "undefined": function() {}
-                },
-                config, html;
+						if (route) $state.go(route, params);
 
-            function saveConfig(c) {
-                config = c;
-                //console.log(config);
-                return $q.when(config);
-            }
+					},
+					"kendo-new-row": function() {
+						scope.noGrid.addRow();
+					},
+					"undo": function() {
+						noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
+					},
+					"undefined": function() {}
+				},
+				config, html;
 
-            function click() {
-                var navFnKey = attrs.noNav,
-                    navFn = navFns[navFnKey];
+			function saveConfig(c) {
+				config = c;
+				//console.log(config);
+				return $q.when(config);
+			}
 
-                if (!navFn) navFn = navFns["undefined"];
+			function click() {
+				var navFnKey = attrs.noNav,
+					navFn = navFns[navFnKey];
 
-                //navFn(config.noNavBar.routes[navFnKey], $state.params);
-                navFn();
-            }
+				if (!navFn) navFn = navFns["undefined"];
 
-            function finish() {
-                el.click(click);
-            }
+				//navFn(config.noNavBar.routes[navFnKey], $state.params);
+				navFn();
+			}
 
-            noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-                .then(saveConfig)
-                .then(finish)
-                .catch(function(err) {
-                    console.error(err);
-                });
+			function finish() {
+				el.click(click);
+			}
+
+			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+				.then(saveConfig)
+				.then(finish)
+				.catch(function(err) {
+					console.error(err);
+				});
 
 
-        }
+		}
 
-        return {
-            restrict: "A",
-            scope: false,
-            link: _link
-        };
-    }])
+		return {
+			restrict: "A",
+			scope: false,
+			link: _link
+		};
+	}])
 
-    .directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
-        var routeNames = {
-                search: "vd.entity.search",
-                edit: "vd.entity.edit",
-                trialSummary: "vd.observations.trialplot",
-                observationsEdit: "vd.observations.editor",
-                observationsNew: "vd.observations.new"
-            },
-            navNames = {
-                search: "search",
-                edit: "edit",
-                basic: "basic"
-            };
+	.directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
+		var routeNames = {
+				search: "vd.entity.search",
+				edit: "vd.entity.edit",
+				trialSummary: "vd.observations.trialplot",
+				observationsEdit: "vd.observations.editor",
+				observationsNew: "vd.observations.new"
+			},
+			navNames = {
+				search: "search",
+				edit: "edit",
+				basic: "basic"
+			};
 
-        function _link(scope, el, attrs) {
-            var config, html;
+		function _link(scope, el, attrs) {
+			var config, html;
 
-            function saveConfig(c) {
-                config = c;
-                //console.log(config);
-                return $q.when(config);
-            }
+			function saveConfig(c) {
+				config = c;
+				//console.log(config);
+				return $q.when(config);
+			}
 
-            function getTemplate() {
+			function getTemplate() {
 
-                function templateUrl(tplKey) {
-                    return "navbars/no-navbar-" + tplKey + ".tpl.html";
-                }
+				function templateUrl(tplKey) {
+					return "navbars/no-navbar-" + tplKey + ".tpl.html";
+				}
 
-                var tplKey = noFormConfig.navBarKeyFromState($state.current.name),
-                    tplUrl = templateUrl(tplKey);
+				var tplKey = noFormConfig.navBarKeyFromState($state.current.name),
+					tplUrl = templateUrl(tplKey);
 
-                return $http.get(tplUrl)
-                    .then(function(resp) {
-                        html = resp.data;
-                        if (tplKey === navNames.edit) {
-                            html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, config.noNavBar.scopeKey.readOnly);
-                            html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, config.noNavBar.scopeKey.writeable);
-                        }
-                        html = $compile(html)(scope);
-                        el.html(html);
-                        return;
-                    })
-                    .catch(function(err) {
-                        if (err.status === 404) {
-                            throw "noFormConfig could not locate the file `navbars/no-nav-bar.json`.";
-                        } else {
-                            throw err;
-                        }
-                    });
+				return $http.get(tplUrl)
+					.then(function(resp) {
+						html = resp.data;
+						if (tplKey === navNames.edit) {
+							html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, config.noNavBar.scopeKey.readOnly);
+							html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, config.noNavBar.scopeKey.writeable);
+						}
+						html = $compile(html)(scope);
+						el.html(html);
+						return;
+					})
+					.catch(function(err) {
+						if (err.status === 404) {
+							throw "noFormConfig could not locate the file `navbars/no-nav-bar.json`.";
+						} else {
+							throw err;
+						}
+					});
 
-            }
+			}
 
-            function finish() {
-                noFormConfig.showNavBar();
-            }
+			function finish() {
+				noFormConfig.showNavBar();
+			}
 
-            noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-                .then(saveConfig)
-                .then(getTemplate)
-                .then(finish)
-                .catch(function(err) {
-                    console.error(err);
-                });
-        }
+			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+				.then(saveConfig)
+				.then(getTemplate)
+				.then(finish)
+				.catch(function(err) {
+					console.error(err);
+				});
+		}
 
-        return {
-            restrict: "E",
-            scope: false,
-            link: _link
-        };
-    }])
+		return {
+			restrict: "E",
+			scope: false,
+			link: _link
+		};
+	}])
 
-    .directive("noReadOnly", [function() {
-        function _link(scope, el, attrs) {
-            el.append("<div class=\"no-editor-cover\"></div>");
-        }
+	.directive("noReadOnly", [function() {
+		function _link(scope, el, attrs) {
+			el.append("<div class=\"no-editor-cover\"></div>");
+		}
 
-        return {
-            restrict: "A",
-            link: _link
-        };
-    }])
+		return {
+			restrict: "A",
+			link: _link
+		};
+	}])
 
-    .service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state) {
-        this.configure = function() {
-            return $q(function(resolve, reject) {
-                var routes;
+	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state){
+		this.configure = function(){
+			return $q(function(resolve, reject){
+				var routes;
 
-                function saveRoutes(resp) {
-                    routes = resp.data;
+				function saveRoutes(resp){
+					routes = resp.data;
 
-                    return $q.when(true);
-                }
+					return $q.when(true);
+				}
 
-                function configureStates() {
-                    for (var r in routes) {
-                        var route = routes[r];
+				function configureStates(){
+					for(var r in routes){
+						var route = routes[r];
 
-                        route.data = {
+						route.data = angular.extend({
                             entities: {}
-                        };
+                        }, route.data);
 
-                        stateProvider.state(route.name, route);
-                    }
+						stateProvider.state(route.name, route);
+					}
 
-                    resolve();
-                }
+					resolve();
+				}
 
-                $http.get("navbars/routes.json")
-                    .then(saveRoutes)
-                    .then(configureStates)
-                    .catch(reject);
-            });
-        };
-    }]);
+				$http.get("navbars/routes.json")
+					.then(saveRoutes)
+					.then(configureStates)
+					.catch(reject);
+			});
+		};
+	}])
+	;
 })(angular);
 
 //validation.js
 (function(angular, undefined) {
-    "use strict";
+	"use strict";
 
-    function _validate(el, field) {
-        if (!field) return;
+	function _validate(el, field) {
+		if (!field) return;
 
-        var t = el.find(".k-editor"),
-            h = el.find(".help-block");
+		var t = el.find(".k-editor"),
+			h = el.find(".help-block");
 
-        h.toggleClass("ng-hide", field.$valid || field.$pristine);
-        if (t.length > 0) {
-            t.closest("div").parent().toggleClass("has-error", field.$invalid);
-            t.closest("div").parent().toggleClass("has-success", field.$invalid);
-            t.toggleClass("has-error", field.$invalid);
-            t.toggleClass("has-success", field.$valid);
-        } else {
-            el.toggleClass("has-error", field.$invalid);
-            el.toggleClass("has-success", field.$valid);
-        }
-    }
-
-
-    function _resetErrors(el, field) {
-        el.find(".help-block").toggleClass("ng-hide", true);
-        el.toggleClass("has-error", false);
-        el.toggleClass("has-success", false);
-    }
+		h.toggleClass("ng-hide", field.$valid || field.$pristine);
+		if (t.length > 0) {
+			t.closest("div").parent().toggleClass("has-error", field.$invalid);
+			t.closest("div").parent().toggleClass("has-success", field.$invalid);
+			t.toggleClass("has-error", field.$invalid);
+			t.toggleClass("has-success", field.$valid);
+		} else {
+			el.toggleClass("has-error", field.$invalid);
+			el.toggleClass("has-success", field.$valid);
+		}
+	}
 
 
-    function _blur(el, field) {
-        if (!field.$pristine) _validate(el, field);
-    }
-
-    /*
-    	### NoFormValidate
-
-    	This class exists because of a bug with nested custom directives and
-    	my apparent misunderstanding of how directives actaull work.  :(
-    */
-    function NoFormValidate(el) {
-        Object.defineProperties(this, {
-            "$valid": {
-                "get": function() {
-                    return el.closest("[ng-form]").hasClass("ng-valid");
-                }
-            },
-            "$invalid": {
-                "get": function() {
-                    return el.closest("[ng-form]").hasClass("ng-invalid");
-                }
-            },
-            "$pristine": {
-                "get": function() {
-                    return el.closest("[ng-form]").hasClass("ng-pristine");
-                }
-            }
-        });
-
-        this.$setPristine = function() {
-            el.closest("[ng-form]").addClass("ng-pristine");
-
-        };
-    }
-
-    angular.module("noinfopath.forms")
-        /**
-         * ## noErrors
-         *
-         * The noErrors directive provides the container for applying the
-         * BootStrap validation CSS, in response to AngularJS validation
-         * attributes. The directive works in conjunction with with the noSubmit
-         * and noReset directive.
-         *
-         * It also provides compatibliy with Kendo UI controls and no-file-upload
-         * component.
-         *
-         */
-        .directive('noErrors', [function() {
-            return {
-                restrict: 'A',
-                require: '?^^form',
-                compile: function(el, attrs) {
-                    var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop]");
-                    i.attr("name", i.attr("ng-model"));
-
-                    return function(scope, el, attrs, form) {
-
-                        if (!form) {
-                            form = new NoFormValidate(el);
-                        }
-
-                        scope.$on('no::validate', _validate.bind(null, el, form[i.attr("name")]));
-                        scope.$on('no::validate:reset', _resetErrors.bind(null, el, form[i.attr("name")]));
-                        i.bind('blur', _blur.bind(null, el, form[i.attr("name")]));
-                    };
-                }
-            };
-        }])
-
-    /**
-     * ## noSubmit
-     *
-     * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
-     */
-    .directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
-        return {
-            restrict: "A",
-            require: "?^form",
-            link: function(scope, el, attr, form) {
-                console.info("Linking noSubmit");
-                if (!form) {
-                    form = new NoFormValidate(el);
-                }
-
-                function _submit(form, e) {
-                    e.preventDefault();
-
-                    if (form.$valid) {
-                        $rootScope.$broadcast("noSubmit::dataReady", el, scope);
-                    } else {
-                        $rootScope.$broadcast("no::validate", form.$valid);
-                    }
-                }
-
-                var tmp = _submit.bind(null, form);
-                el.click(tmp);
-            }
-        };
-    }])
-
-    /**
-     * ## noReset
-     *
-     * When user clicks reset, form is reset to null state.
-     */
-    .directive('noReset', ['$rootScope', function($rootScope) {
-        return {
-            restrict: "A",
-            require: "?^^form",
-            scope: false,
-            link: function(scope, el, attr, ctrl) {
-                var rsetKey = "noReset_" + attr.noReset;
-
-                scope.$watch(attr.noReset, function(n, o, s) {
-                    if (n) {
-                        scope[rsetKey] = angular.copy(scope[attr.noReset]);
-                    }
-                });
-
-                function _reset(form, e) {
-                    e.preventDefault();
-                    if (!form) {
-                        form = new NoFormValidate(el);
-                    }
-
-                    scope[attr.noReset] = scope[rsetKey];
-                    scope.$digest();
-
-                    $rootScope.$broadcast("noReset::click");
-                    form.$setPristine();
-                    $rootScope.$broadcast("no::validate:reset");
-                }
-                el.bind('click', _reset.bind(null, ctrl));
-            }
-        };
-    }])
-
-    .directive("noEnterKey", [function() {
-        function _enterPressed(el, scope, attr) {
-            el.bind("keypress", function(e) {
-                var keyCode = e.which || e.keyCode;
-
-                if (keyCode === 13) //Enter is pressed
-                {
-                    var frm = el.closest("[no-form], [ng-form]");
-
-                    frm.find("[no-submit]").click(); //Assume that it is a button
-                }
-            });
-        }
-
-        function _link(scope, el, attr) {
-            console.warn("This will be refactored into a different module in a future release");
-            _enterPressed(el, scope);
-        }
-
-        var directive = {
-            restrict: "A",
-            link: _link
-        };
-
-        return directive;
-    }])
+	function _resetErrors(el, field) {
+		el.find(".help-block").toggleClass("ng-hide", true);
+		el.toggleClass("has-error", false);
+		el.toggleClass("has-success", false);
+	}
 
 
-    ;
+	function _blur(el, field) {
+		if (!field.$pristine) _validate(el, field);
+	}
+
+	/*
+		### NoFormValidate
+
+		This class exists because of a bug with nested custom directives and
+		my apparent misunderstanding of how directives actaull work.  :(
+	*/
+	function NoFormValidate(el) {
+		Object.defineProperties(this, {
+			"$valid": {
+				"get": function() {
+					return el.closest("[ng-form]").hasClass("ng-valid");
+				}
+			},
+			"$invalid": {
+				"get": function() {
+					return el.closest("[ng-form]").hasClass("ng-invalid");
+				}
+			},
+			"$pristine": {
+				"get": function() {
+					return el.closest("[ng-form]").hasClass("ng-pristine");
+				}
+			}
+		});
+
+		this.$setPristine = function() {
+			el.closest("[ng-form]").addClass("ng-pristine");
+
+		};
+	}
+
+	angular.module("noinfopath.forms")
+		/**
+		 * ## noErrors
+		 *
+		 * The noErrors directive provides the container for applying the
+		 * BootStrap validation CSS, in response to AngularJS validation
+		 * attributes. The directive works in conjunction with with the noSubmit
+		 * and noReset directive.
+		 *
+		 * It also provides compatibliy with Kendo UI controls and no-file-upload
+		 * component.
+		 *
+		 */
+		.directive('noErrors', [function() {
+			return {
+				restrict: 'A',
+				require: '?^^form',
+				compile: function(el, attrs) {
+					var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop]");
+					i.attr("name", i.attr("ng-model"));
+
+					return function(scope, el, attrs, form) {
+
+						if (!form) {
+							form = new NoFormValidate(el);
+						}
+
+						scope.$on('no::validate', _validate.bind(null, el, form[i.attr("name")]));
+						scope.$on('no::validate:reset', _resetErrors.bind(null, el, form[i.attr("name")]));
+						i.bind('blur', _blur.bind(null, el, form[i.attr("name")]));
+					};
+				}
+			};
+		}])
+
+		/**
+		 * ## noSubmit
+		 *
+		 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+		 */
+		.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+			return {
+				restrict: "A",
+				require: "?^form",
+				link: function(scope, el, attr, form) {
+					console.info("Linking noSubmit");
+					if (!form) {
+						form = new NoFormValidate(el);
+					}
+
+					function _submit(form, e) {
+						e.preventDefault();
+
+						if (form.$valid) {
+							$rootScope.$broadcast("noSubmit::dataReady", el, scope);
+						} else {
+							$rootScope.$broadcast("no::validate", form.$valid);
+						}
+					}
+
+					var tmp = _submit.bind(null, form);
+					el.click(tmp);
+				}
+			};
+		}])
+
+		/**
+		 * ## noReset
+		 *
+		 * When user clicks reset, form is reset to null state.
+		 */
+		.directive('noReset', ['$rootScope', function($rootScope) {
+			return {
+				restrict: "A",
+				require: "?^^form",
+				scope: false,
+				link: function(scope, el, attr, ctrl) {
+					var rsetKey = "noReset_" + attr.noReset;
+
+					scope.$watch(attr.noReset, function(n, o, s) {
+						if (n) {
+							scope[rsetKey] = angular.copy(scope[attr.noReset]);
+						}
+					});
+
+					function _reset(form, e) {
+						e.preventDefault();
+						if (!form) {
+							form = new NoFormValidate(el);
+						}
+
+						scope[attr.noReset] = scope[rsetKey];
+						scope.$digest();
+
+						$rootScope.$broadcast("noReset::click");
+						form.$setPristine();
+						$rootScope.$broadcast("no::validate:reset");
+					}
+					el.bind('click', _reset.bind(null, ctrl));
+				}
+			};
+		}])
+
+		.directive("noEnterKey", [function() {
+			function _enterPressed(el, scope, attr) {
+				el.bind("keypress", function(e) {
+					var keyCode = e.which || e.keyCode;
+
+					if (keyCode === 13) //Enter is pressed
+					{
+						var frm = el.closest("[no-form], [ng-form]");
+
+						frm.find("[no-submit]").click(); //Assume that it is a button
+					}
+				});
+			}
+
+			function _link(scope, el, attr) {
+				console.warn("This will be refactored into a different module in a future release");
+				_enterPressed(el, scope);
+			}
+
+			var directive = {
+				restrict: "A",
+				link: _link
+			};
+
+			return directive;
+		}])
+
+
+	;
 })(angular);
 
 //form-config.js
 (function(angular, undefined) {
-    "use strict";
+	"use strict";
 
-    angular.module("noinfopath.forms")
-        .service("noFormConfig", ["$q", "$http", "$rootScope", "$state", "noDataSource", "noLocalStorage", function($q, $http, $rootScope, $state, noDataSource, noLocalStorage) {
-            var SELF = this,
-                isDbPopulated = noLocalStorage.getItem("dbPopulated_NoInfoPath_dtc_v1"),
-                dsConfig = {
-                    "dataProvider": "noIndexedDb",
-                    "databaseName": "NoInfoPath_dtc_v1",
-                    "entityName": "NoInfoPath_Forms",
-                    "primaryKey": "FormID"
-                },
-                dataSource,
-                noNavBarConfig = {};
+	angular.module("noinfopath.forms")
+		.service("noFormConfig", ["$q", "$http", "$rootScope", "$state", "noDataSource", "noLocalStorage", function($q, $http, $rootScope, $state, noDataSource, noLocalStorage) {
+			var SELF = this,
+				isDbPopulated = noLocalStorage.getItem("dbPopulated_NoInfoPath_dtc_v1"),
+				dsConfig = {
+					"dataProvider": "noIndexedDb",
+					"databaseName": "NoInfoPath_dtc_v1",
+					"entityName": "NoInfoPath_Forms",
+					"primaryKey": "FormID"
+				},
+				dataSource,
+				noNavBarConfig = {};
 
-            this.navBarNames = {
-                BASIC: "basic",
-                SEARCH: "search",
-                READONLY: "readonly",
-                WRITEABLE: "writeable",
-                CREATE: "create"
-            };
+			this.navBarNames = {
+				BASIC: "basic",
+				SEARCH: "search",
+				READONLY: "readonly",
+				WRITEABLE: "writeable",
+				CREATE: "create"
+			};
 
-            $rootScope.$on("noSubmit::success", function() {
-                //Assume we are in edit mode.
-                this.showNavBar(this.navBarNames.READONLY);
-            }.bind(this));
+			$rootScope.$on("noSubmit::success", function() {
+				//Assume we are in edit mode.
+				this.showNavBar(this.navBarNames.READONLY);
+			}.bind(this));
 
-            $rootScope.$on("noReset::click", function() {
-                //Assume we are in edit mode.
-                this.showNavBar(this.navBarNames.READONLY);
-            }.bind(this));
+			$rootScope.$on("noReset::click", function() {
+				//Assume we are in edit mode.
+				this.showNavBar(this.navBarNames.READONLY);
+			}.bind(this));
 
-            function getFormConfig() {
-                return $q(function(resolve, reject) {
+			function getFormConfig() {
+				return $q(function(resolve, reject) {
 
-                    $http.get("/no-forms.json")
-                        .then(function(resp) {
-                            var forms = resp.data,
-                                promises = [];
+					$http.get("/no-forms.json")
+						.then(function(resp) {
+							var forms = resp.data,
+								promises = [];
 
-                            dataSource.entity.clear()
-                                .then(function() {
-                                    for (var f in forms) {
-                                        var frm = forms[f];
+							dataSource.entity.clear()
+								.then(function() {
+									for (var f in forms) {
+										var frm = forms[f];
 
-                                        switch (f) {
-                                            case "editors":
-                                                for (var e in frm) {
-                                                    var editor = frm[e];
+										switch (f) {
+											case "editors":
+												for (var e in frm) {
+													var editor = frm[e];
 
-                                                    editor.search.shortName = "search_" + e;
-                                                    editor.search.routeToken = e;
-                                                    promises.push(dataSource.create(editor.search));
+													editor.search.shortName = "search_" + e;
+													editor.search.routeToken = e;
+													promises.push(dataSource.create(editor.search));
 
-                                                    editor.edit.shortName = "edit_" + e;
-                                                    editor.edit.routeToken = e;
-                                                    promises.push(dataSource.create(editor.edit));
-                                                }
-                                                break;
-                                            case "lookups":
-                                                for (var g in frm) {
-                                                    var refed = frm[g];
+													editor.edit.shortName = "edit_" + e;
+													editor.edit.routeToken = e;
+													promises.push(dataSource.create(editor.edit));
+												}
+												break;
+											case "lookups":
+												for (var g in frm) {
+													var refed = frm[g];
 
-                                                    refed.shortName = "lookup_" + g;
-                                                    refed.routeToken = g;
-                                                    promises.push(dataSource.create(refed));
+													refed.shortName = "lookup_" + g;
+													refed.routeToken = g;
+													promises.push(dataSource.create(refed));
 
-                                                }
-                                                break;
-                                            default:
-                                                frm.shortName = f;
-                                                promises.push(dataSource.create(frm));
-                                                break;
-                                        }
-                                    }
+												}
+												break;
+											default:
+												frm.shortName = f;
+												promises.push(dataSource.create(frm));
+												break;
+										}
+									}
 
-                                    $q.all(promises)
-                                        .then(function() {
-                                            noLocalStorage.setItem("dbPopulated_NoInfoPath_dtc_v1", {
-                                                timestamp: new Date()
-                                            });
-                                            resolve();
-                                        })
-                                        .catch(reject);
+									$q.all(promises)
+										.then(function() {
+											noLocalStorage.setItem("dbPopulated_NoInfoPath_dtc_v1", {
+												timestamp: new Date()
+											});
+											resolve();
+										})
+										.catch(reject);
 
-                                });
+								});
 
-                        })
-                        .catch(function(err) {
+						})
+						.catch(function(err) {
 
-                            if (isDbPopulated) {
-                                resolve();
-                            } else {
-                                reject(err);
-                            }
-                        });
-                });
-            }
+							if (isDbPopulated) {
+								resolve();
+							} else {
+								reject(err);
+							}
+						});
+				});
+			}
 
-            function getNavBarConfig() {
-                noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
+			function getNavBarConfig() {
+				noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
 
-                if (!noNavBarConfig) {
-                    noNavBarConfig = $q(function(resolve, reject) {
-                        $http.get("navbars/no-nav-bar.json")
-                            .then(function(resp) {
-                                noNavBarConfig = resp.data;
-                                noLocalStorage.setItem("no-nav-bar", noNavBarConfig);
-                                resolve(noNavBarConfig);
-                            })
-                            .catch(reject);
-                    });
-                }
+				if (!noNavBarConfig) {
+					noNavBarConfig = $q(function(resolve, reject) {
+						$http.get("navbars/no-nav-bar.json")
+							.then(function(resp) {
+								noNavBarConfig = resp.data;
+								noLocalStorage.setItem("no-nav-bar", noNavBarConfig);
+								resolve(noNavBarConfig);
+							})
+							.catch(reject);
+					});
+				}
 
-                return $q.when(noNavBarConfig);
-            }
+				return $q.when(noNavBarConfig);
+			}
 
-            Object.defineProperties(this, {
-                "noNavBarRoutes": {
-                    "get": function() {
-                        return noNavBarConfig;
-                    }
-                }
-            });
+			Object.defineProperties(this, {
+				"noNavBarRoutes": {
+					"get": function() {
+						return noNavBarConfig;
+					}
+				}
+			});
 
-            this.whenReady = function() {
-                dataSource = noDataSource.create(dsConfig, $rootScope);
+			this.whenReady = function() {
+				dataSource = noDataSource.create(dsConfig, $rootScope);
 
-                return getFormConfig()
-                    .then(getNavBarConfig)
-                    .catch(function(err) {
-                        console.log(err);
-                    });
-            };
+				return getFormConfig()
+					.then(getNavBarConfig)
+					.catch(function(err) {
+						console.log(err);
+					});
+			};
 
-            this.getFormByShortName = function(shortName, scope) {
-                var form = noInfoPath.getItem(scope, shortName),
-                    promise;
+			this.getFormByShortName = function(shortName, scope) {
+				var form = noInfoPath.getItem(scope, shortName),
+					promise;
 
-                if (form) {
-                    promise = $q.when(form);
-                } else {
-                    promise = dataSource.entity
-                        .where("shortName")
-                        .equals(shortName)
-                        .toArray()
-                        .then(function(data) {
-                            form = data.length ? data[0] : undefined;
-                            scope[shortName] = form;
-                            return form;
-                        });
-                }
-
-
-                return promise;
-            };
-
-            this.getFormByRoute = function(routeName, entityName, scope) {
-                var promise,
-                    routeKey = entityName ? routeName + entityName : routeName,
-                    form = scope[routeKey];
-
-                if (form) {
-                    promise = $q.when(form);
-                } else {
-                    if (entityName) {
-                        promise = dataSource.entity
-                            .where("[route.name+routeToken]")
-                            .equals([routeName, entityName])
-                            .toArray()
-                            .then(function(data) {
-                                form = data.length ? data[0] : undefined;
-                                scope[routeKey] = form;
-                                return form;
-                            });
-                    } else {
-                        promise = dataSource.entity
-                            .where("route.name")
-                            .equals(routeName)
-                            .toArray()
-                            .then(function(data) {
-                                form = data.length ? data[0] : undefined;
-                                scope[routeKey] = form;
-                                return form;
-                            });
-                    }
-
-                }
-
-                return promise;
-            };
+				if (form) {
+					promise = $q.when(form);
+				} else {
+					promise = dataSource.entity
+						.where("shortName")
+						.equals(shortName)
+						.toArray()
+						.then(function(data) {
+							form = data.length ? data[0] : undefined;
+							scope[shortName] = form;
+							return form;
+						});
+				}
 
 
-            function navBarRoute(stateName) {
-                var route = SELF.noNavBarRoutes[stateName];
+				return promise;
+			};
 
-                route = route ? route : SELF.noNavBarRoutes[undefined];
+			this.getFormByRoute = function(routeName, entityName, scope) {
+				var promise,
+					routeKey = entityName ? routeName + entityName : routeName,
+					form = scope[routeKey];
 
-                return route;
-            }
+				if (form) {
+					promise = $q.when(form);
+				} else {
+					if (entityName) {
+						promise = dataSource.entity
+							.where("[route.name+routeToken]")
+							.equals([routeName, entityName])
+							.toArray()
+							.then(function(data) {
+								form = data.length ? data[0] : undefined;
+								scope[routeKey] = form;
+								return form;
+							});
+					} else {
+						promise = dataSource.entity
+							.where("route.name")
+							.equals(routeName)
+							.toArray()
+							.then(function(data) {
+								form = data.length ? data[0] : undefined;
+								scope[routeKey] = form;
+								return form;
+							});
+					}
+
+				}
+
+				return promise;
+			};
 
 
-            function navBarEntityIDFromState(route, params) {
-                var id;
+			function navBarRoute(stateName) {
+				var route = SELF.noNavBarRoutes[stateName];
 
-                if (route.entityIdParam) {
-                    id = params[route.entityIdParam];
-                }
+				route = route ? route : SELF.noNavBarRoutes[undefined];
 
-                return id;
-            }
+				return route;
+			}
 
-            function navBarNameFromState(state) {
-                if (!state) throw "state is a required parameter";
 
-                var route = navBarRoute(state.current.name),
-                    navBar = SELF.navBarKeyFromState(state.current.name),
-                    id = navBarEntityIDFromState(route, state.params);
+			function navBarEntityIDFromState(route, params) {
+				var id;
 
-                if (navBar === "edit") navBar = id ? "readonly" : "create";
+				if (route.entityIdParam) {
+					id = params[route.entityIdParam];
+				}
 
-                return navBar;
-            }
-            this.navBarKeyFromState = function(stateName) {
-                var navBarKey = navBarRoute(stateName)
-                    .type;
+				return id;
+			}
 
-                return navBarKey;
-            };
+			function navBarNameFromState(state) {
+				if (!state) throw "state is a required parameter";
 
-            this.showNavBar = function(navBarName) {
-                //if (!navBarKey) throw "navBarKey is a required parameter";
+				var route = navBarRoute(state.current.name),
+					navBar = SELF.navBarKeyFromState(state.current.name),
+					id = navBarEntityIDFromState(route, state.params);
 
-                var targetNavBar = navBarName ? navBarName : navBarNameFromState($state);
+				if (navBar === "edit") navBar = id ? "readonly" : "create";
 
-                var el = angular.element(".has-button-bar");
-                el.find("[no-navbar]")
-                    .addClass("ng-hide");
-                el.find("[no-navbar='" + targetNavBar + "']")
-                    .removeClass("ng-hide");
+				return navBar;
+			}
+			this.navBarKeyFromState = function(stateName) {
+				var navBarKey = navBarRoute(stateName)
+					.type;
 
-                //Make form readonly when required.
-                switch (targetNavBar) {
-                    case this.navBarNames.READONLY:
-                        angular.element(".no-editor-cover")
-                            .removeClass("ng-hide");
-                        break;
-                    case this.navBarNames.WRITEABLE:
-                    case this.navBarNames.CREATE:
-                        angular.element(".no-editor-cover")
-                            .addClass("ng-hide");
-                        break;
-                }
-            };
-        }]);
+				return navBarKey;
+			};
+
+			this.showNavBar = function(navBarName) {
+				//if (!navBarKey) throw "navBarKey is a required parameter";
+
+				var targetNavBar = navBarName ? navBarName : navBarNameFromState($state);
+
+				var el = angular.element(".has-button-bar");
+				el.find("[no-navbar]")
+					.addClass("ng-hide");
+				el.find("[no-navbar='" + targetNavBar + "']")
+					.removeClass("ng-hide");
+
+				//Make form readonly when required.
+				switch (targetNavBar) {
+					case this.navBarNames.READONLY:
+						angular.element(".no-editor-cover")
+							.removeClass("ng-hide");
+						break;
+					case this.navBarNames.WRITEABLE:
+					case this.navBarNames.CREATE:
+						angular.element(".no-editor-cover")
+							.addClass("ng-hide");
+						break;
+				}
+			};
+		}]);
 })(angular);
