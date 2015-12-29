@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.9
+* @version 1.0.10
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -295,13 +295,13 @@
 						params = params ? params : {};
 
 						params.entity = $state.params.entity;
+                        if (attrs.noNav === "new" && route == "vd.entity.edit") {
+                            params.id = "";
+                        } else {
+                            params = $state.params;
+                        }
 
-						if (attrs.noNav === "new" && route == "vd.entity.edit") {
-							params.id = "";
-						} else {
-							params = $state.params;
-						}
-
+						//console.log(route, params);
 						if (route) $state.go(route, params);
 
 					},
@@ -451,9 +451,7 @@
 					for(var r in routes){
 						var route = routes[r];
 
-						route.data = angular.extend({
-                            entities: {}
-                        }, route.data);
+						route.data = { entities: {} };
 
 						stateProvider.state(route.name, route);
 					}
