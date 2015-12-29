@@ -200,7 +200,6 @@
 					getTemplate()
 						.then(function(template){
 							var t = $compile(template)(scope);
-							console.log(t);
 							el.html(t);
 						})
 						.catch(function(err){

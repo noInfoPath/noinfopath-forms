@@ -44,10 +44,12 @@
 
 						params = params ? params : {};
 
-						if (attrs.noNav === "new" && route == "vd.entity.edit") {
-							params.entity = $state.params.entity;
-							params.id = "";
-						}
+						params.entity = $state.params.entity;
+                        if (attrs.noNav === "new" && route == "vd.entity.edit") {
+                            params.id = "";
+                        } else {
+                            params = $state.params;
+                        }
 
 						//console.log(route, params);
 						if (route) $state.go(route, params);
