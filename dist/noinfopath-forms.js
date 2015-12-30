@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.7
+* @version 1.0.10
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -216,7 +216,6 @@
 					getTemplate()
 						.then(function(template){
 							var t = $compile(template)(scope);
-							console.log(t);
 							el.html(t);
 						})
 						.catch(function(err){
@@ -295,10 +294,12 @@
 
 						params = params ? params : {};
 
-						if (attrs.noNav === "new" && route == "vd.entity.edit") {
-							params.entity = $state.params.entity;
-							params.id = "";
-						}
+						params.entity = $state.params.entity;
+                        if (attrs.noNav === "new" && route == "vd.entity.edit") {
+                            params.id = "";
+                        } else {
+                            params = $state.params;
+                        }
 
 						//console.log(route, params);
 						if (route) $state.go(route, params);
@@ -643,7 +644,7 @@
 
 					if (keyCode === 13) //Enter is pressed
 					{
-						var frm = el.closest("[no-form]");
+						var frm = el.closest("[no-form], [ng-form]");
 
 						frm.find("[no-submit]").click(); //Assume that it is a button
 					}
@@ -662,6 +663,7 @@
 
 			return directive;
 		}])
+
 
 	;
 })(angular);
