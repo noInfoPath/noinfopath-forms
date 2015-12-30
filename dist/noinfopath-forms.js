@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.10
+* @version 1.0.11
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -133,6 +133,7 @@
 
 								noTrans.upsert(data)
 									.then(function(result) {
+										scope[entityName] = result[noForm.noComponents[entityName].noDataSource.entityName];
 										_growl("yeah"); //TODO: refactor _grown into a service.
 										noTransactionCache.endTransaction(noTrans);
 										scope.$emit("noSubmit::success");
