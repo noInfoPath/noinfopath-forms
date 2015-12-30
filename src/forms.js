@@ -117,6 +117,7 @@
 
 								noTrans.upsert(data)
 									.then(function(result) {
+										scope[entityName] = result[noForm.noComponents[entityName].noDataSource.entityName];
 										_growl("yeah"); //TODO: refactor _grown into a service.
 										noTransactionCache.endTransaction(noTrans);
 										scope.$emit("noSubmit::success");
