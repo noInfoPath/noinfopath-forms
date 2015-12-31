@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.11
+* @version 1.0.12
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -95,94 +95,100 @@
 		 *	}
 		 *	```
 		 */
-		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache) {
+		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache, _) {
+
+			function _saveSuccessful(noTrans, scope, _, noForm, results){
+				//scope[entityName] = result[noForm.noComponents[entityName].noDataSource.entityName];
+				_growl(scope, "yeah"); //TODO: refactor _grown into a service.
+				noTransactionCache.endTransaction(noTrans);
+				scope.$emit("noSubmit::success");
+			}
+
+			function _saveFailed(scope, err){
+				console.error(err);
+				_growl(scope, "boo");
+			}
+
+			function _save(noForm, _, e, elm, scope){
+				var comp = noForm.noComponents[noForm.primaryComponent],
+					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
+					data = scope[comp.scopeKey];
+
+				noTrans.upsert(data)
+					.then(_saveSuccessful.bind(null, noTrans, scope, _, noForm))
+					.catch(_saveFailed.bind(null, scope));
+			}
+
+			function _growl(scope, m) {
+				scope.noForm[m] = true;
+
+				$timeout(function() {
+					scope.noForm = {
+						yeah: false,
+						boo: false
+					};
+				}, 5000);
+
+			}
+
+			function _link(scope, el, attrs, form, $t) {
+				var noForm;
+
+				scope.$validator = form;
+
+				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+					.then(function(config) {
+
+						var	primaryComponent;
+						/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+
+						noForm = config.noForm;
+
+						for (var c in config.noComponents) {
+							var comp = config.noComponents[c];
+
+							if (comp.scopeKey) {
+								if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
+									scope.waitingFor[comp.scopeKey] = true;
+								}
+							}
+
+						}
+
+						scope.$on("noSubmit::dataReady", _save.bind(null, noForm, _));
+					});
+
+				scope.waitingFor = {};
+				scope.noFormReady = false;
+				scope.noForm = {
+					yeah: false,
+					boo: false
+				};
+
+				var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval) {
+					var stillWaiting = false;
+					for (var w in scope.waitingFor) {
+						if (scope.waitingFor[w]) {
+							stillWaiting = true;
+							break;
+						}
+					}
+
+					scope.noFormReady = !stillWaiting;
+
+					if (scope.noFormReady) releaseWaitingFor();
+
+				});
+
+			}
+
 			return {
 				restrict: "E",
 				//controller: [function(){}],
 				//transclude: true,
 				scope: false,
 				require: "?^form",
-				link: function(scope, el, attrs, form, $t) {
-					scope.$validator = form;
-
-					noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-						.then(function(config) {
-							var noForm = config.noForm,
-								primaryComponent;
-							/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
-
-
-							for (var c in config.noComponents) {
-								var comp = config.noComponents[c];
-
-								if (comp.scopeKey) {
-									if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
-										scope.waitingFor[comp.scopeKey] = true;
-									}
-
-								}
-
-							}
-
-
-							scope.$on("noSubmit::dataReady", function(e, elm, scope) {
-								var entityName = elm.attr("no-submit"),
-									comp = noForm.noComponents[entityName],
-									noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
-									data = scope[entityName];
-
-								noTrans.upsert(data)
-									.then(function(result) {
-										scope[entityName] = result[noForm.noComponents[entityName].noDataSource.entityName];
-										_growl("yeah"); //TODO: refactor _grown into a service.
-										noTransactionCache.endTransaction(noTrans);
-										scope.$emit("noSubmit::success");
-									})
-									.catch(function(err) {
-										console.error(err);
-										_growl("boo");
-									});
-							});
-
-						});
-
-					scope.waitingFor = {};
-					scope.noFormReady = false;
-					scope.noForm = {
-						yeah: false,
-						boo: false
-					};
-
-					var releaseWaitingFor = scope.$watchCollection("waitingFor", function(newval, oldval) {
-						var stillWaiting = false;
-						for (var w in scope.waitingFor) {
-							if (scope.waitingFor[w]) {
-								stillWaiting = true;
-								break;
-							}
-						}
-
-						scope.noFormReady = !stillWaiting;
-
-						if (scope.noFormReady) releaseWaitingFor();
-
-					});
-
-
-					function _growl(m) {
-						scope.noForm[m] = true;
-
-						$timeout(function() {
-							scope.noForm = {
-								yeah: false,
-								boo: false
-							};
-						}, 5000);
-
-					}
-
-
-				}
+				link: _link
 			};
 		}])
 
@@ -242,7 +248,6 @@
 			return directive;
 
 		}])
-
 
 		;
 
