@@ -55,9 +55,11 @@
 													editor.search.routeToken = e;
 													promises.push(dataSource.create(editor.search));
 
-													editor.edit.shortName = "edit_" + e;
-													editor.edit.routeToken = e;
-													promises.push(dataSource.create(editor.edit));
+													if(editor.edit){
+														editor.edit.shortName = "edit_" + e;
+														editor.edit.routeToken = e;
+														promises.push(dataSource.create(editor.edit));
+													}
 												}
 												break;
 											case "lookups":
