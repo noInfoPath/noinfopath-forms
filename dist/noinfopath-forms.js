@@ -1,11 +1,11 @@
 /**
-* # noinfopath.forms
-* @version 1.0.13
-*
-* Combines the functionality of validation from bootstrap and angular.
-*
-*/
-	(function(angular,undefined){
+ * # noinfopath.forms
+ * @version 1.0.14
+ *
+ * Combines the functionality of validation from bootstrap and angular.
+ *
+ */
+(function(angular, undefined) {
 	"use strict";
 
 
@@ -97,19 +97,19 @@
 		 */
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache, _) {
 
-			function _saveSuccessful(noTrans, scope, _, noForm, results){
+			function _saveSuccessful(noTrans, scope, _, noForm, results) {
 				//scope[entityName] = result[noForm.noComponents[entityName].noDataSource.entityName];
 				_growl(scope, "yeah"); //TODO: refactor _grown into a service.
 				noTransactionCache.endTransaction(noTrans);
 				scope.$emit("noSubmit::success");
 			}
 
-			function _saveFailed(scope, err){
+			function _saveFailed(scope, err) {
 				console.error(err);
 				_growl(scope, "boo");
 			}
 
-			function _save(noForm, _, e, elm, scope){
+			function _save(noForm, _, e, elm, scope) {
 				var comp = noForm.noComponents[noForm.primaryComponent],
 					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
 					data = scope[comp.scopeKey];
@@ -131,6 +131,24 @@
 
 			}
 
+			function _notify(scope, _, noForm, routeParams, e, data) {
+				//console.log(noForm, routeParams, data);
+				var comp = noForm.noComponents[noForm.primaryComponent],
+					pkFilter = _.find(comp.noDataSource.filter, {
+						field: comp.noDataSource.primaryKey
+					}),
+					routeID = routeParams[pkFilter.value.property],
+					isSameEntity = comp.noDataSource.entityName === data.tableName,
+					isSameRecord = routeID === data.values[pkFilter.field];
+
+				if (isSameEntity, isSameRecord) {
+					if (confirm("External change dectect, would you like to reload this record")) {
+						scope[comp.scopeKey] = data.values;
+					}
+				}
+
+			}
+
 			function _link(scope, el, attrs, form, $t) {
 				var noForm;
 
@@ -139,7 +157,7 @@
 				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
 					.then(function(config) {
 
-						var	primaryComponent;
+						var primaryComponent;
 						/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
 
 						noForm = config.noForm;
@@ -156,6 +174,8 @@
 						}
 
 						scope.$on("noSubmit::dataReady", _save.bind(null, noForm, _));
+
+						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
 					});
 
 				scope.waitingFor = {};
@@ -192,64 +212,64 @@
 			};
 		}])
 
-		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state){
-			function _link(scope, el, attrs){
+	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
+		function _link(scope, el, attrs) {
 
-				function getTemplate(){
-					var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+			function getTemplate() {
+				var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
 
-					//console.log(scope.noRecordStatsTemplate);
+				//console.log(scope.noRecordStatsTemplate);
 
-					if(scope.noRecordStatsTemplate){
-						return $q.when(scope.noRecordStatsTemplate);
-					}else{
-						return $q(function(resolve, reject){
-							$http.get(url)
-								.then(function(resp){
-									scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
-									resolve(scope.noRecordStatsTemplate);
-								})
-								.catch(function(err){
-									console.log(err);
-									reject(err);
-								});
-						});
-					}
+				if (scope.noRecordStatsTemplate) {
+					return $q.when(scope.noRecordStatsTemplate);
+				} else {
+					return $q(function(resolve, reject) {
+						$http.get(url)
+							.then(function(resp) {
+								scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+								resolve(scope.noRecordStatsTemplate);
+							})
+							.catch(function(err) {
+								console.log(err);
+								reject(err);
+							});
+					});
 				}
+			}
 
-				function _finish(config){
-					if(!config) throw "Form configuration not found for route " + $state.params.entity;
+			function _finish(config) {
+				if (!config) throw "Form configuration not found for route " + $state.params.entity;
 
-					getTemplate()
-						.then(function(template){
-							var t = $compile(template)(scope);
-							el.html(t);
-						})
-						.catch(function(err){
-							console.error(err);
-						});
-				}
-
-				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-					.then(_finish)
-					.catch(function(err){
+				getTemplate()
+					.then(function(template) {
+						var t = $compile(template)(scope);
+						el.html(t);
+					})
+					.catch(function(err) {
 						console.error(err);
 					});
 			}
 
+			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+				.then(_finish)
+				.catch(function(err) {
+					console.error(err);
+				});
+		}
 
 
-			var directive = {
-				restrict: "E",
-				link: _link
 
-			};
+		var directive = {
+			restrict: "E",
+			link: _link
 
-			return directive;
+		};
 
-		}])
+		return directive;
 
-		;
+	}])
+
+	;
 
 
 })(angular);
@@ -260,18 +280,18 @@
 	var stateProvider;
 
 	angular.module("noinfopath.forms")
-		.config(["$stateProvider", function($stateProvider){
+		.config(["$stateProvider", function($stateProvider) {
 			stateProvider = $stateProvider;
 		}])
 
-		.run(["$rootScope", function($rootScope) {
-			$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
-				//console.log("$stateChangeSuccess");
-				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
-				event.currentScope.$root.noNav[fromState.name] = fromParams;
-			});
+	.run(["$rootScope", function($rootScope) {
+		$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
+			//console.log("$stateChangeSuccess");
+			event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
+			event.currentScope.$root.noNav[fromState.name] = fromParams;
+		});
 
-		}])
+	}])
 
 	.directive("noNav", ["$q", "$state", "noFormConfig", function($q, $state, noFormConfig) {
 
@@ -301,11 +321,11 @@
 						params = params ? params : {};
 
 						params.entity = $state.params.entity;
-                        if (attrs.noNav === "new" && route == "vd.entity.edit") {
-                            params.id = "";
-                        } else {
-                            params = $state.params;
-                        }
+						if (attrs.noNav === "new" && route == "vd.entity.edit") {
+							params.id = "";
+						} else {
+							params = $state.params;
+						}
 
 						//console.log(route, params);
 						if (route) $state.go(route, params);
@@ -442,22 +462,24 @@
 		};
 	}])
 
-	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state){
-		this.configure = function(){
-			return $q(function(resolve, reject){
+	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state) {
+		this.configure = function() {
+			return $q(function(resolve, reject) {
 				var routes;
 
-				function saveRoutes(resp){
+				function saveRoutes(resp) {
 					routes = resp.data;
 
 					return $q.when(true);
 				}
 
-				function configureStates(){
-					for(var r in routes){
+				function configureStates() {
+					for (var r in routes) {
 						var route = routes[r];
 
-						route.data = { entities: {} };
+						route.data = {
+							entities: {}
+						};
 
 						stateProvider.state(route.name, route);
 					}
@@ -471,8 +493,7 @@
 					.catch(reject);
 			});
 		};
-	}])
-	;
+	}]);
 })(angular);
 
 //validation.js
@@ -575,100 +596,100 @@
 			};
 		}])
 
-		/**
-		 * ## noSubmit
-		 *
-		 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
-		 */
-		.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
-			return {
-				restrict: "A",
-				require: "?^form",
-				link: function(scope, el, attr, form) {
-					console.info("Linking noSubmit");
+	/**
+	 * ## noSubmit
+	 *
+	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+	 */
+	.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+		return {
+			restrict: "A",
+			require: "?^form",
+			link: function(scope, el, attr, form) {
+				console.info("Linking noSubmit");
+				if (!form) {
+					form = new NoFormValidate(el);
+				}
+
+				function _submit(form, e) {
+					e.preventDefault();
+
+					if (form.$valid) {
+						$rootScope.$broadcast("noSubmit::dataReady", el, scope);
+					} else {
+						$rootScope.$broadcast("no::validate", form.$valid);
+					}
+				}
+
+				var tmp = _submit.bind(null, form);
+				el.click(tmp);
+			}
+		};
+	}])
+
+	/**
+	 * ## noReset
+	 *
+	 * When user clicks reset, form is reset to null state.
+	 */
+	.directive('noReset', ['$rootScope', function($rootScope) {
+		return {
+			restrict: "A",
+			require: "?^^form",
+			scope: false,
+			link: function(scope, el, attr, ctrl) {
+				var rsetKey = "noReset_" + attr.noReset;
+
+				scope.$watch(attr.noReset, function(n, o, s) {
+					if (n) {
+						scope[rsetKey] = angular.copy(scope[attr.noReset]);
+					}
+				});
+
+				function _reset(form, e) {
+					e.preventDefault();
 					if (!form) {
 						form = new NoFormValidate(el);
 					}
 
-					function _submit(form, e) {
-						e.preventDefault();
+					scope[attr.noReset] = scope[rsetKey];
+					scope.$digest();
 
-						if (form.$valid) {
-							$rootScope.$broadcast("noSubmit::dataReady", el, scope);
-						} else {
-							$rootScope.$broadcast("no::validate", form.$valid);
-						}
-					}
-
-					var tmp = _submit.bind(null, form);
-					el.click(tmp);
+					$rootScope.$broadcast("noReset::click");
+					form.$setPristine();
+					$rootScope.$broadcast("no::validate:reset");
 				}
-			};
-		}])
+				el.bind('click', _reset.bind(null, ctrl));
+			}
+		};
+	}])
 
-		/**
-		 * ## noReset
-		 *
-		 * When user clicks reset, form is reset to null state.
-		 */
-		.directive('noReset', ['$rootScope', function($rootScope) {
-			return {
-				restrict: "A",
-				require: "?^^form",
-				scope: false,
-				link: function(scope, el, attr, ctrl) {
-					var rsetKey = "noReset_" + attr.noReset;
+	.directive("noEnterKey", [function() {
+		function _enterPressed(el, scope, attr) {
+			el.bind("keypress", function(e) {
+				var keyCode = e.which || e.keyCode;
 
-					scope.$watch(attr.noReset, function(n, o, s) {
-						if (n) {
-							scope[rsetKey] = angular.copy(scope[attr.noReset]);
-						}
-					});
+				if (keyCode === 13) //Enter is pressed
+				{
+					var frm = el.closest("[no-form], [ng-form]");
 
-					function _reset(form, e) {
-						e.preventDefault();
-						if (!form) {
-							form = new NoFormValidate(el);
-						}
-
-						scope[attr.noReset] = scope[rsetKey];
-						scope.$digest();
-
-						$rootScope.$broadcast("noReset::click");
-						form.$setPristine();
-						$rootScope.$broadcast("no::validate:reset");
-					}
-					el.bind('click', _reset.bind(null, ctrl));
+					frm.find("[no-submit]").click(); //Assume that it is a button
 				}
-			};
-		}])
+			});
+		}
 
-		.directive("noEnterKey", [function() {
-			function _enterPressed(el, scope, attr) {
-				el.bind("keypress", function(e) {
-					var keyCode = e.which || e.keyCode;
+		function _link(scope, el, attr) {
+			console.warn("This will be refactored into a different module in a future release");
+			_enterPressed(el, scope);
+		}
 
-					if (keyCode === 13) //Enter is pressed
-					{
-						var frm = el.closest("[no-form], [ng-form]");
+		var directive = {
+			restrict: "A",
+			link: _link
+		};
 
-						frm.find("[no-submit]").click(); //Assume that it is a button
-					}
-				});
-			}
-
-			function _link(scope, el, attr) {
-				console.warn("This will be refactored into a different module in a future release");
-				_enterPressed(el, scope);
-			}
-
-			var directive = {
-				restrict: "A",
-				link: _link
-			};
-
-			return directive;
-		}])
+		return directive;
+	}])
 
 
 	;
@@ -731,7 +752,7 @@
 													editor.search.routeToken = e;
 													promises.push(dataSource.create(editor.search));
 
-													if(editor.edit){
+													if (editor.edit) {
 														editor.edit.shortName = "edit_" + e;
 														editor.edit.routeToken = e;
 														promises.push(dataSource.create(editor.edit));

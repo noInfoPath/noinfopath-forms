@@ -81,19 +81,19 @@
 		 */
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache, _) {
 
-			function _saveSuccessful(noTrans, scope, _, noForm, results){
+			function _saveSuccessful(noTrans, scope, _, noForm, results) {
 				//scope[entityName] = result[noForm.noComponents[entityName].noDataSource.entityName];
 				_growl(scope, "yeah"); //TODO: refactor _grown into a service.
 				noTransactionCache.endTransaction(noTrans);
 				scope.$emit("noSubmit::success");
 			}
 
-			function _saveFailed(scope, err){
+			function _saveFailed(scope, err) {
 				console.error(err);
 				_growl(scope, "boo");
 			}
 
-			function _save(noForm, _, e, elm, scope){
+			function _save(noForm, _, e, elm, scope) {
 				var comp = noForm.noComponents[noForm.primaryComponent],
 					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
 					data = scope[comp.scopeKey];
@@ -115,6 +115,24 @@
 
 			}
 
+			function _notify(scope, _, noForm, routeParams, e, data) {
+				//console.log(noForm, routeParams, data);
+				var comp = noForm.noComponents[noForm.primaryComponent],
+					pkFilter = _.find(comp.noDataSource.filter, {
+						field: comp.noDataSource.primaryKey
+					}),
+					routeID = routeParams[pkFilter.value.property],
+					isSameEntity = comp.noDataSource.entityName === data.tableName,
+					isSameRecord = routeID === data.values[pkFilter.field];
+
+				if (isSameEntity, isSameRecord) {
+					if (confirm("External change dectect, would you like to reload this record")) {
+						scope[comp.scopeKey] = data.values;
+					}
+				}
+
+			}
+
 			function _link(scope, el, attrs, form, $t) {
 				var noForm;
 
@@ -123,7 +141,7 @@
 				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
 					.then(function(config) {
 
-						var	primaryComponent;
+						var primaryComponent;
 						/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
 
 						noForm = config.noForm;
@@ -140,6 +158,8 @@
 						}
 
 						scope.$on("noSubmit::dataReady", _save.bind(null, noForm, _));
+
+						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
 					});
 
 				scope.waitingFor = {};
@@ -176,64 +196,64 @@
 			};
 		}])
 
-		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state){
-			function _link(scope, el, attrs){
+	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
+		function _link(scope, el, attrs) {
 
-				function getTemplate(){
-					var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+			function getTemplate() {
+				var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
 
-					//console.log(scope.noRecordStatsTemplate);
+				//console.log(scope.noRecordStatsTemplate);
 
-					if(scope.noRecordStatsTemplate){
-						return $q.when(scope.noRecordStatsTemplate);
-					}else{
-						return $q(function(resolve, reject){
-							$http.get(url)
-								.then(function(resp){
-									scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
-									resolve(scope.noRecordStatsTemplate);
-								})
-								.catch(function(err){
-									console.log(err);
-									reject(err);
-								});
-						});
-					}
+				if (scope.noRecordStatsTemplate) {
+					return $q.when(scope.noRecordStatsTemplate);
+				} else {
+					return $q(function(resolve, reject) {
+						$http.get(url)
+							.then(function(resp) {
+								scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+								resolve(scope.noRecordStatsTemplate);
+							})
+							.catch(function(err) {
+								console.log(err);
+								reject(err);
+							});
+					});
 				}
+			}
 
-				function _finish(config){
-					if(!config) throw "Form configuration not found for route " + $state.params.entity;
+			function _finish(config) {
+				if (!config) throw "Form configuration not found for route " + $state.params.entity;
 
-					getTemplate()
-						.then(function(template){
-							var t = $compile(template)(scope);
-							el.html(t);
-						})
-						.catch(function(err){
-							console.error(err);
-						});
-				}
-
-				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-					.then(_finish)
-					.catch(function(err){
+				getTemplate()
+					.then(function(template) {
+						var t = $compile(template)(scope);
+						el.html(t);
+					})
+					.catch(function(err) {
 						console.error(err);
 					});
 			}
 
+			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
+				.then(_finish)
+				.catch(function(err) {
+					console.error(err);
+				});
+		}
 
 
-			var directive = {
-				restrict: "E",
-				link: _link
 
-			};
+		var directive = {
+			restrict: "E",
+			link: _link
 
-			return directive;
+		};
 
-		}])
+		return directive;
 
-		;
+	}])
+
+	;
 
 
 })(angular);
