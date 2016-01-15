@@ -35,6 +35,7 @@
 
 			function getFormConfig() {
 				return $q(function(resolve, reject) {
+					$rootScope.noFormConfig = {};
 
 					$http.get("/no-forms.json")
 						.then(function(resp) {
@@ -55,7 +56,7 @@
 													editor.search.routeToken = e;
 													promises.push(dataSource.create(editor.search));
 
-													if(editor.edit){
+													if (editor.edit) {
 														editor.edit.shortName = "edit_" + e;
 														editor.edit.routeToken = e;
 														promises.push(dataSource.create(editor.edit));
@@ -138,63 +139,48 @@
 					});
 			};
 
-			this.getFormByShortName = function(shortName, scope) {
-				var form = noInfoPath.getItem(scope, shortName),
-					promise;
+			this.getFormByShortName = function(shortName) {
+				return getRoute("route.name", shortName);
+			};
 
-				if (form) {
-					promise = $q.when(form);
-				} else {
-					promise = dataSource.entity
-						.where("shortName")
-						.equals(shortName)
-						.toArray()
-						.then(function(data) {
-							form = data.length ? data[0] : undefined;
-							scope[shortName] = form;
-							return form;
+			this.getFormByRoute = function(routeName, entityName) {
+				return getRoute("[route.name+routeToken]", [routeName, entityName]);
+			};
+
+			function getRoute(routeKey, routeData){
+				var requestInProgress = "requestInProgress",
+					scopeKey = routeData.join("").replace(/\./g,""),
+					form = $rootScope.noFormConfig[scopeKey],
+					isInProgress = form === requestInProgress,
+					haveDataAlready = angular.isObject(form),
+					waitingFor;
+
+				if(isInProgress) {
+					return $q(function(resolve, reject){
+						waitingFor = $rootScope.$watch("noFormConfig." + scopeKey, function(n, o){
+							if(n && n !== requestInProgress){
+								waitingFor();
+								resolve(n);
+							}
 						});
-				}
-
-
-				return promise;
-			};
-
-			this.getFormByRoute = function(routeName, entityName, scope) {
-				var promise,
-					routeKey = entityName ? routeName + entityName : routeName,
-					form = scope[routeKey];
-
-				if (form) {
-					promise = $q.when(form);
+					});
+				} else if(haveDataAlready) {
+					return $q.when(form);
 				} else {
-					if (entityName) {
-						promise = dataSource.entity
-							.where("[route.name+routeToken]")
-							.equals([routeName, entityName])
+					$rootScope.noFormConfig[scopeKey] = requestInProgress;
+					return $q(function(resolve, reject){
+						dataSource.entity
+							.where(routeKey)
+							.equals(routeData)
 							.toArray()
 							.then(function(data) {
 								form = data.length ? data[0] : undefined;
-								scope[routeKey] = form;
-								return form;
+								$rootScope.noFormConfig[scopeKey] = form;
+								resolve(form);
 							});
-					} else {
-						promise = dataSource.entity
-							.where("route.name")
-							.equals(routeName)
-							.toArray()
-							.then(function(data) {
-								form = data.length ? data[0] : undefined;
-								scope[routeKey] = form;
-								return form;
-							});
-					}
-
+					});
 				}
-
-				return promise;
-			};
-
+			}
 
 			function navBarRoute(stateName) {
 				var route = SELF.noNavBarRoutes[stateName];
