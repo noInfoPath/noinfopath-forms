@@ -1,11 +1,11 @@
 /**
- * # noinfopath.forms
- * @version 1.0.14
- *
- * Combines the functionality of validation from bootstrap and angular.
- *
- */
-(function(angular, undefined) {
+* # noinfopath.forms
+* @version 1.0.15
+*
+* Combines the functionality of validation from bootstrap and angular.
+*
+*/
+	(function(angular,undefined){
 	"use strict";
 
 
@@ -141,8 +141,8 @@
 					isSameEntity = comp.noDataSource.entityName === data.tableName,
 					isSameRecord = routeID === data.values[pkFilter.field];
 
-				if (isSameEntity, isSameRecord) {
-					if (confirm("External change dectect, would you like to reload this record")) {
+				if (isSameEntity && isSameRecord) {
+					if (confirm("External change detected, would you like to reload this record")) {
 						scope[comp.scopeKey] = data.values;
 					}
 				}
@@ -280,18 +280,18 @@
 	var stateProvider;
 
 	angular.module("noinfopath.forms")
-		.config(["$stateProvider", function($stateProvider) {
+		.config(["$stateProvider", function($stateProvider){
 			stateProvider = $stateProvider;
 		}])
 
-	.run(["$rootScope", function($rootScope) {
-		$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
-			//console.log("$stateChangeSuccess");
-			event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
-			event.currentScope.$root.noNav[fromState.name] = fromParams;
-		});
+		.run(["$rootScope", function($rootScope) {
+			$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
+				//console.log("$stateChangeSuccess");
+				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
+				event.currentScope.$root.noNav[fromState.name] = fromParams;
+			});
 
-	}])
+		}])
 
 	.directive("noNav", ["$q", "$state", "noFormConfig", function($q, $state, noFormConfig) {
 
@@ -321,11 +321,11 @@
 						params = params ? params : {};
 
 						params.entity = $state.params.entity;
-						if (attrs.noNav === "new" && route == "vd.entity.edit") {
-							params.id = "";
-						} else {
-							params = $state.params;
-						}
+                        if (attrs.noNav === "new" && route == "vd.entity.edit") {
+                            params.id = "";
+                        } else {
+                            params = $state.params;
+                        }
 
 						//console.log(route, params);
 						if (route) $state.go(route, params);
@@ -462,24 +462,22 @@
 		};
 	}])
 
-	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state) {
-		this.configure = function() {
-			return $q(function(resolve, reject) {
+	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state){
+		this.configure = function(){
+			return $q(function(resolve, reject){
 				var routes;
 
-				function saveRoutes(resp) {
+				function saveRoutes(resp){
 					routes = resp.data;
 
 					return $q.when(true);
 				}
 
-				function configureStates() {
-					for (var r in routes) {
+				function configureStates(){
+					for(var r in routes){
 						var route = routes[r];
 
-						route.data = {
-							entities: {}
-						};
+						route.data = { entities: {} };
 
 						stateProvider.state(route.name, route);
 					}
@@ -493,7 +491,8 @@
 					.catch(reject);
 			});
 		};
-	}]);
+	}])
+	;
 })(angular);
 
 //validation.js
@@ -596,100 +595,100 @@
 			};
 		}])
 
-	/**
-	 * ## noSubmit
-	 *
-	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
-	 */
-	.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
-		return {
-			restrict: "A",
-			require: "?^form",
-			link: function(scope, el, attr, form) {
-				console.info("Linking noSubmit");
-				if (!form) {
-					form = new NoFormValidate(el);
-				}
-
-				function _submit(form, e) {
-					e.preventDefault();
-
-					if (form.$valid) {
-						$rootScope.$broadcast("noSubmit::dataReady", el, scope);
-					} else {
-						$rootScope.$broadcast("no::validate", form.$valid);
-					}
-				}
-
-				var tmp = _submit.bind(null, form);
-				el.click(tmp);
-			}
-		};
-	}])
-
-	/**
-	 * ## noReset
-	 *
-	 * When user clicks reset, form is reset to null state.
-	 */
-	.directive('noReset', ['$rootScope', function($rootScope) {
-		return {
-			restrict: "A",
-			require: "?^^form",
-			scope: false,
-			link: function(scope, el, attr, ctrl) {
-				var rsetKey = "noReset_" + attr.noReset;
-
-				scope.$watch(attr.noReset, function(n, o, s) {
-					if (n) {
-						scope[rsetKey] = angular.copy(scope[attr.noReset]);
-					}
-				});
-
-				function _reset(form, e) {
-					e.preventDefault();
+		/**
+		 * ## noSubmit
+		 *
+		 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+		 */
+		.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+			return {
+				restrict: "A",
+				require: "?^form",
+				link: function(scope, el, attr, form) {
+					console.info("Linking noSubmit");
 					if (!form) {
 						form = new NoFormValidate(el);
 					}
 
-					scope[attr.noReset] = scope[rsetKey];
-					scope.$digest();
+					function _submit(form, e) {
+						e.preventDefault();
 
-					$rootScope.$broadcast("noReset::click");
-					form.$setPristine();
-					$rootScope.$broadcast("no::validate:reset");
+						if (form.$valid) {
+							$rootScope.$broadcast("noSubmit::dataReady", el, scope);
+						} else {
+							$rootScope.$broadcast("no::validate", form.$valid);
+						}
+					}
+
+					var tmp = _submit.bind(null, form);
+					el.click(tmp);
 				}
-				el.bind('click', _reset.bind(null, ctrl));
+			};
+		}])
+
+		/**
+		 * ## noReset
+		 *
+		 * When user clicks reset, form is reset to null state.
+		 */
+		.directive('noReset', ['$rootScope', function($rootScope) {
+			return {
+				restrict: "A",
+				require: "?^^form",
+				scope: false,
+				link: function(scope, el, attr, ctrl) {
+					var rsetKey = "noReset_" + attr.noReset;
+
+					scope.$watch(attr.noReset, function(n, o, s) {
+						if (n) {
+							scope[rsetKey] = angular.copy(scope[attr.noReset]);
+						}
+					});
+
+					function _reset(form, e) {
+						e.preventDefault();
+						if (!form) {
+							form = new NoFormValidate(el);
+						}
+
+						scope[attr.noReset] = scope[rsetKey];
+						scope.$digest();
+
+						$rootScope.$broadcast("noReset::click");
+						form.$setPristine();
+						$rootScope.$broadcast("no::validate:reset");
+					}
+					el.bind('click', _reset.bind(null, ctrl));
+				}
+			};
+		}])
+
+		.directive("noEnterKey", [function() {
+			function _enterPressed(el, scope, attr) {
+				el.bind("keypress", function(e) {
+					var keyCode = e.which || e.keyCode;
+
+					if (keyCode === 13) //Enter is pressed
+					{
+						var frm = el.closest("[no-form], [ng-form]");
+
+						frm.find("[no-submit]").click(); //Assume that it is a button
+					}
+				});
 			}
-		};
-	}])
 
-	.directive("noEnterKey", [function() {
-		function _enterPressed(el, scope, attr) {
-			el.bind("keypress", function(e) {
-				var keyCode = e.which || e.keyCode;
+			function _link(scope, el, attr) {
+				console.warn("This will be refactored into a different module in a future release");
+				_enterPressed(el, scope);
+			}
 
-				if (keyCode === 13) //Enter is pressed
-				{
-					var frm = el.closest("[no-form], [ng-form]");
+			var directive = {
+				restrict: "A",
+				link: _link
+			};
 
-					frm.find("[no-submit]").click(); //Assume that it is a button
-				}
-			});
-		}
-
-		function _link(scope, el, attr) {
-			console.warn("This will be refactored into a different module in a future release");
-			_enterPressed(el, scope);
-		}
-
-		var directive = {
-			restrict: "A",
-			link: _link
-		};
-
-		return directive;
-	}])
+			return directive;
+		}])
 
 
 	;
@@ -732,6 +731,7 @@
 
 			function getFormConfig() {
 				return $q(function(resolve, reject) {
+					$rootScope.noFormConfig = {};
 
 					$http.get("/no-forms.json")
 						.then(function(resp) {
@@ -835,63 +835,48 @@
 					});
 			};
 
-			this.getFormByShortName = function(shortName, scope) {
-				var form = noInfoPath.getItem(scope, shortName),
-					promise;
+			this.getFormByShortName = function(shortName) {
+				return getRoute("route.name", shortName);
+			};
 
-				if (form) {
-					promise = $q.when(form);
-				} else {
-					promise = dataSource.entity
-						.where("shortName")
-						.equals(shortName)
-						.toArray()
-						.then(function(data) {
-							form = data.length ? data[0] : undefined;
-							scope[shortName] = form;
-							return form;
+			this.getFormByRoute = function(routeName, entityName) {
+				return getRoute("[route.name+routeToken]", [routeName, entityName]);
+			};
+
+			function getRoute(routeKey, routeData){
+				var requestInProgress = "requestInProgress",
+					scopeKey = routeData.join("").replace(/\./g,""),
+					form = $rootScope.noFormConfig[scopeKey],
+					isInProgress = form === requestInProgress,
+					haveDataAlready = angular.isObject(form),
+					waitingFor;
+
+				if(isInProgress) {
+					return $q(function(resolve, reject){
+						waitingFor = $rootScope.$watch("noFormConfig." + scopeKey, function(n, o){
+							if(n && n !== requestInProgress){
+								waitingFor();
+								resolve(n);
+							}
 						});
-				}
-
-
-				return promise;
-			};
-
-			this.getFormByRoute = function(routeName, entityName, scope) {
-				var promise,
-					routeKey = entityName ? routeName + entityName : routeName,
-					form = scope[routeKey];
-
-				if (form) {
-					promise = $q.when(form);
+					});
+				} else if(haveDataAlready) {
+					return $q.when(form);
 				} else {
-					if (entityName) {
-						promise = dataSource.entity
-							.where("[route.name+routeToken]")
-							.equals([routeName, entityName])
+					$rootScope.noFormConfig[scopeKey] = requestInProgress;
+					return $q(function(resolve, reject){
+						dataSource.entity
+							.where(routeKey)
+							.equals(routeData)
 							.toArray()
 							.then(function(data) {
 								form = data.length ? data[0] : undefined;
-								scope[routeKey] = form;
-								return form;
+								$rootScope.noFormConfig[scopeKey] = form;
+								resolve(form);
 							});
-					} else {
-						promise = dataSource.entity
-							.where("route.name")
-							.equals(routeName)
-							.toArray()
-							.then(function(data) {
-								form = data.length ? data[0] : undefined;
-								scope[routeKey] = form;
-								return form;
-							});
-					}
-
+					});
 				}
-
-				return promise;
-			};
-
+			}
 
 			function navBarRoute(stateName) {
 				var route = SELF.noNavBarRoutes[stateName];
