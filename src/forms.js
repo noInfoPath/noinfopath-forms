@@ -125,8 +125,8 @@
 					isSameEntity = comp.noDataSource.entityName === data.tableName,
 					isSameRecord = routeID === data.values[pkFilter.field];
 
-				if (isSameEntity, isSameRecord) {
-					if (confirm("External change dectect, would you like to reload this record")) {
+				if (isSameEntity && isSameRecord) {
+					if (confirm("External change detected, would you like to reload this record")) {
 						scope[comp.scopeKey] = data.values;
 					}
 				}
