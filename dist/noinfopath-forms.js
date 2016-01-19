@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.15
+* @version 1.0.16
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -840,12 +840,16 @@
 			};
 
 			this.getFormByRoute = function(routeName, entityName) {
-				return getRoute("[route.name+routeToken]", [routeName, entityName]);
+				if(entityName){ // This is here to prevent a regression.
+					return getRoute("[route.name+routeToken]", [routeName, entityName]);
+				} else {
+					return getRoute("route.name", routeName);
+				}
 			};
 
 			function getRoute(routeKey, routeData){
 				var requestInProgress = "requestInProgress",
-					scopeKey = routeData.join("").replace(/\./g,""),
+					scopeKey = angular.isArray(routeData) ? routeData.join("").replace(/\./g,"") : routeData.replace(/\./g,""),
 					form = $rootScope.noFormConfig[scopeKey],
 					isInProgress = form === requestInProgress,
 					haveDataAlready = angular.isObject(form),
