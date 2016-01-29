@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.16
+* @version 1.0.17
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -97,11 +97,29 @@
 		 */
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache, _) {
 
-			function _saveSuccessful(noTrans, scope, _, noForm, results) {
-				//scope[entityName] = result[noForm.noComponents[entityName].noDataSource.entityName];
-				_growl(scope, "yeah"); //TODO: refactor _grown into a service.
+			function _saveSuccessful(noTrans, scope, _, config, results) {
+
+				_growl(scope, "yeah"); //TODO: refactor _growl into a service.
+
+				var readOnly, primaryComponent, primaryComponentObject, entityName;
+
+				if (config && config.noNavBar && config.noNavBar.scopeKey && config.noNavBar.scopeKey.readOnly){
+					primaryComponent = config.noForm.primaryComponent;
+					readOnly = "noReset_" + primaryComponent;
+
+					if(primaryComponent){
+						primaryComponentObject = config.noForm.noComponents[primaryComponent];
+						entityName = primaryComponentObject.noDataSource.entityName;
+						scope[readOnly] = angular.merge(scope[readOnly], results[entityName]);
+					}
+				}
+
 				noTransactionCache.endTransaction(noTrans);
-				scope.$emit("noSubmit::success");
+				scope.$emit("noSubmit::success", {
+					config: config,
+					data: results,
+					state: $state
+				});
 			}
 
 			function _saveFailed(scope, err) {
@@ -109,13 +127,14 @@
 				_growl(scope, "boo");
 			}
 
-			function _save(noForm, _, e, elm, scope) {
-				var comp = noForm.noComponents[noForm.primaryComponent],
+			function _save(config, _, e, elm, scope) {
+				var noForm = config.noForm,
+					comp = noForm.noComponents[noForm.primaryComponent],
 					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
 					data = scope[comp.scopeKey];
 
 				noTrans.upsert(data)
-					.then(_saveSuccessful.bind(null, noTrans, scope, _, noForm))
+					.then(_saveSuccessful.bind(null, noTrans, scope, _, config))
 					.catch(_saveFailed.bind(null, scope));
 			}
 
@@ -133,6 +152,7 @@
 
 			function _notify(scope, _, noForm, routeParams, e, data) {
 				//console.log(noForm, routeParams, data);
+
 				var comp = noForm.noComponents[noForm.primaryComponent],
 					pkFilter = _.find(comp.noDataSource.filter, {
 						field: comp.noDataSource.primaryKey
@@ -146,7 +166,6 @@
 						scope[comp.scopeKey] = data.values;
 					}
 				}
-
 			}
 
 			function _link(scope, el, attrs, form, $t) {
@@ -173,7 +192,7 @@
 
 						}
 
-						scope.$on("noSubmit::dataReady", _save.bind(null, noForm, _));
+						scope.$on("noSubmit::dataReady", _save.bind(null, config, _));
 
 						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
 					});
