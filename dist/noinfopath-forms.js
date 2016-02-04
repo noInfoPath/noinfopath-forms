@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.17
+* @version 1.0.18
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -518,7 +518,7 @@
 (function(angular, undefined) {
 	"use strict";
 
-	function _validate(el, field) {
+	function _validate(el, field, label) {
 		if (!field) return;
 
 		var t = el.find(".k-editor"),
@@ -531,6 +531,10 @@
 			t.toggleClass("has-error", field.$invalid);
 			t.toggleClass("has-success", field.$valid);
 		} else {
+			if(label){
+				label.toggleClass("has-error", field.$invalid);
+				label.toggleClass("has-success", field.$valid);
+			}
 			el.toggleClass("has-error", field.$invalid);
 			el.toggleClass("has-success", field.$valid);
 		}
@@ -601,14 +605,23 @@
 					i.attr("name", i.attr("ng-model"));
 
 					return function(scope, el, attrs, form) {
+						var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop]"),
+							fld,
+							lbl;
 
 						if (!form) {
 							form = new NoFormValidate(el);
 						}
 
-						scope.$on('no::validate', _validate.bind(null, el, form[i.attr("name")]));
-						scope.$on('no::validate:reset', _resetErrors.bind(null, el, form[i.attr("name")]));
-						i.bind('blur', _blur.bind(null, el, form[i.attr("name")]));
+						fld = form[i.attr("name")];
+
+						if(i.attr("type") === "hidden"){
+							lbl = el.find("SPAN[required]");
+						}
+
+						scope.$on('no::validate', _validate.bind(null, el, fld, lbl));
+						scope.$on('no::validate:reset', _resetErrors.bind(null, el, fld, lbl));
+						i.bind('blur', _blur.bind(null, el, fld, lbl));
 					};
 				}
 			};
