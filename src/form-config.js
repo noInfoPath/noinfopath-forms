@@ -16,11 +16,6 @@
 				noNavBarConfig,
 				cacheNavBar = false;
 
-			noConfig.whenReady("config.json")
-			.then(function(){
-				cacheNavBar = noConfig.current.noCacheNoNavBar;
-			});
-
 			this.navBarNames = {
 				BASIC: "basic",
 				SEARCH: "search",
@@ -123,7 +118,7 @@
 				if(cacheNavBar){
 					noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
 				}
-				
+
 				if (!noNavBarConfig) {
 					noNavBarConfig = $q(function(resolve, reject) {
 						$http.get("navbars/no-nav-bar.json")
@@ -148,6 +143,7 @@
 			});
 
 			this.whenReady = function() {
+				cacheNavBar = noConfig.current ? noConfig.current.noCacheNoNavBar : false;
 				dataSource = noDataSource.create(dsConfig, $rootScope);
 
 				return getFormConfig()
