@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.18
+* @version 1.0.19
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -398,14 +398,7 @@
 	}])
 
 	.directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
-		var routeNames = {
-				search: "vd.entity.search",
-				edit: "vd.entity.edit",
-				trialSummary: "vd.observations.trialplot",
-				observationsEdit: "vd.observations.editor",
-				observationsNew: "vd.observations.new"
-			},
-			navNames = {
+		var navNames = {
 				search: "search",
 				edit: "edit",
 				basic: "basic"
@@ -731,7 +724,7 @@
 	"use strict";
 
 	angular.module("noinfopath.forms")
-		.service("noFormConfig", ["$q", "$http", "$rootScope", "$state", "noDataSource", "noLocalStorage", function($q, $http, $rootScope, $state, noDataSource, noLocalStorage) {
+		.service("noFormConfig", ["$q", "$http", "$rootScope", "$state", "noDataSource", "noLocalStorage", "noConfig", function($q, $http, $rootScope, $state, noDataSource, noLocalStorage, noConfig) {
 			var SELF = this,
 				isDbPopulated = noLocalStorage.getItem("dbPopulated_NoInfoPath_dtc_v1"),
 				dsConfig = {
@@ -741,7 +734,8 @@
 					"primaryKey": "FormID"
 				},
 				dataSource,
-				noNavBarConfig = {};
+				noNavBarConfig,
+				cacheNavBar = false;
 
 			this.navBarNames = {
 				BASIC: "basic",
@@ -775,36 +769,45 @@
 									for (var f in forms) {
 										var frm = forms[f];
 
-										switch (f) {
-											case "editors":
-												for (var e in frm) {
-													var editor = frm[e];
+										if(frm.areas){
+											var areas = frm.areas;
+											for (var na in areas) {
+												var newForm = areas[na];
+												newForm.shortName = na;
+												promises.push(dataSource.create(newForm));
+											}
+										} else {
+											switch (f) {
+												case "editors":
+													for (var e in frm) {
+														var editor = frm[e];
 
-													editor.search.shortName = "search_" + e;
-													editor.search.routeToken = e;
-													promises.push(dataSource.create(editor.search));
+														editor.search.shortName = "search_" + e;
+														editor.search.routeToken = e;
+														promises.push(dataSource.create(editor.search));
 
-													if (editor.edit) {
-														editor.edit.shortName = "edit_" + e;
-														editor.edit.routeToken = e;
-														promises.push(dataSource.create(editor.edit));
+														if (editor.edit) {
+															editor.edit.shortName = "edit_" + e;
+															editor.edit.routeToken = e;
+															promises.push(dataSource.create(editor.edit));
+														}
 													}
-												}
-												break;
-											case "lookups":
-												for (var g in frm) {
-													var refed = frm[g];
+													break;
+												case "lookups":
+													for (var g in frm) {
+														var refed = frm[g];
 
-													refed.shortName = "lookup_" + g;
-													refed.routeToken = g;
-													promises.push(dataSource.create(refed));
+														refed.shortName = "lookup_" + g;
+														refed.routeToken = g;
+														promises.push(dataSource.create(refed));
 
-												}
-												break;
-											default:
-												frm.shortName = f;
-												promises.push(dataSource.create(frm));
-												break;
+													}
+													break;
+												default:
+													frm.shortName = f;
+													promises.push(dataSource.create(frm));
+													break;
+											}
 										}
 									}
 
@@ -832,7 +835,10 @@
 			}
 
 			function getNavBarConfig() {
-				noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
+
+				if(cacheNavBar){
+					noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
+				}
 
 				if (!noNavBarConfig) {
 					noNavBarConfig = $q(function(resolve, reject) {
@@ -858,6 +864,7 @@
 			});
 
 			this.whenReady = function() {
+				cacheNavBar = noConfig.current ? noConfig.current.noCacheNoNavBar : false;
 				dataSource = noDataSource.create(dsConfig, $rootScope);
 
 				return getFormConfig()
@@ -956,7 +963,7 @@
 
 				var targetNavBar = navBarName ? navBarName : navBarNameFromState($state);
 
-				var el = angular.element(".has-button-bar");
+				var el = angular.element("no-nav-bar");
 				el.find("[no-navbar]")
 					.addClass("ng-hide");
 				el.find("[no-navbar='" + targetNavBar + "']")

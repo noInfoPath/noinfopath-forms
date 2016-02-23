@@ -103,14 +103,7 @@
 	}])
 
 	.directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
-		var routeNames = {
-				search: "vd.entity.search",
-				edit: "vd.entity.edit",
-				trialSummary: "vd.observations.trialplot",
-				observationsEdit: "vd.observations.editor",
-				observationsNew: "vd.observations.new"
-			},
-			navNames = {
+		var navNames = {
 				search: "search",
 				edit: "edit",
 				basic: "basic"
