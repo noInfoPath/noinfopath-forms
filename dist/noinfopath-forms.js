@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.19
+* @version 1.0.20
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -745,14 +745,25 @@
 				CREATE: "create"
 			};
 
-			$rootScope.$on("noSubmit::success", function() {
-				//Assume we are in edit mode.
-				this.showNavBar(this.navBarNames.READONLY);
+			$rootScope.$on("noSubmit::success", function(e, resp) {
+				var nb = resp.config.noNavBar;
+				if(nb && nb.routes && nb.routes.afterSave){
+					$state.go(nb.routes.afterSave);
+				}else{
+					//Assume we are in edit mode.
+					this.showNavBar(this.navBarNames.READONLY);
+				}
 			}.bind(this));
 
 			$rootScope.$on("noReset::click", function() {
 				//Assume we are in edit mode.
-				this.showNavBar(this.navBarNames.READONLY);
+				var nb = resp.config.noNavBar;
+				if(nb && nb.routes && nb.routes.afterSave){
+					$state.go(nb.routes.afterSave);
+				}else{
+					//Assume we are in edit mode.
+					this.showNavBar(this.navBarNames.READONLY);
+				}
 			}.bind(this));
 
 			function getFormConfig() {
