@@ -179,6 +179,28 @@
 						scope.$on("noSubmit::dataReady", _save.bind(null, config, _));
 
 						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
+
+						scope.$on("noSubmit::success", function(e, resp) {
+							var nb = resp.config.noNavBar;
+							if(nb && nb.routes && nb.routes.afterSave){
+								$state.go(nb.routes.afterSave);
+							}else{
+								//Assume we are in edit mode.
+								this.showNavBar(this.navBarNames.READONLY);
+							}
+						}.bind(noFormConfig));
+
+						scope.$on("noReset::click", function(config) {
+							//Assume we are in edit mode.
+							var nb = config.noNavBar;
+							if(nb && nb.routes && nb.routes.afterSave){
+								$state.go(nb.routes.afterSave);
+							}else{
+								//Assume we are in edit mode.
+								this.showNavBar(this.navBarNames.READONLY);
+							}
+						}.bind(noFormConfig, config));
+						
 					});
 
 				scope.waitingFor = {};

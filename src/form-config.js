@@ -24,27 +24,6 @@
 				CREATE: "create"
 			};
 
-			$rootScope.$on("noSubmit::success", function(e, resp) {
-				var nb = resp.config.noNavBar;
-				if(nb && nb.routes && nb.routes.afterSave){
-					$state.go(nb.routes.afterSave);
-				}else{
-					//Assume we are in edit mode.
-					this.showNavBar(this.navBarNames.READONLY);
-				}
-			}.bind(this));
-
-			$rootScope.$on("noReset::click", function() {
-				//Assume we are in edit mode.
-				var nb = resp.config.noNavBar;
-				if(nb && nb.routes && nb.routes.afterSave){
-					$state.go(nb.routes.afterSave);
-				}else{
-					//Assume we are in edit mode.
-					this.showNavBar(this.navBarNames.READONLY);
-				}
-			}.bind(this));
-
 			function getFormConfig() {
 				return $q(function(resolve, reject) {
 					$rootScope.noFormConfig = {};

@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.20
+* @version 1.0.21
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -195,6 +195,28 @@
 						scope.$on("noSubmit::dataReady", _save.bind(null, config, _));
 
 						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
+
+						scope.$on("noSubmit::success", function(e, resp) {
+							var nb = resp.config.noNavBar;
+							if(nb && nb.routes && nb.routes.afterSave){
+								$state.go(nb.routes.afterSave);
+							}else{
+								//Assume we are in edit mode.
+								this.showNavBar(this.navBarNames.READONLY);
+							}
+						}.bind(noFormConfig));
+
+						scope.$on("noReset::click", function(config) {
+							//Assume we are in edit mode.
+							var nb = config.noNavBar;
+							if(nb && nb.routes && nb.routes.afterSave){
+								$state.go(nb.routes.afterSave);
+							}else{
+								//Assume we are in edit mode.
+								this.showNavBar(this.navBarNames.READONLY);
+							}
+						}.bind(noFormConfig, config));
+						
 					});
 
 				scope.waitingFor = {};
@@ -744,27 +766,6 @@
 				WRITEABLE: "writeable",
 				CREATE: "create"
 			};
-
-			$rootScope.$on("noSubmit::success", function(e, resp) {
-				var nb = resp.config.noNavBar;
-				if(nb && nb.routes && nb.routes.afterSave){
-					$state.go(nb.routes.afterSave);
-				}else{
-					//Assume we are in edit mode.
-					this.showNavBar(this.navBarNames.READONLY);
-				}
-			}.bind(this));
-
-			$rootScope.$on("noReset::click", function() {
-				//Assume we are in edit mode.
-				var nb = resp.config.noNavBar;
-				if(nb && nb.routes && nb.routes.afterSave){
-					$state.go(nb.routes.afterSave);
-				}else{
-					//Assume we are in edit mode.
-					this.showNavBar(this.navBarNames.READONLY);
-				}
-			}.bind(this));
 
 			function getFormConfig() {
 				return $q(function(resolve, reject) {

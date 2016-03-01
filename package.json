@@ -1,6 +1,6 @@
 {
   "name": "@noinfopath/noinfopath-forms",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "noinfopath forms module",
   "main": "src/forms.js",
   "scripts": {
