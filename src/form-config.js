@@ -60,6 +60,12 @@
 															editor.edit.routeToken = e;
 															promises.push(dataSource.create(editor.edit));
 														}
+
+														if (editor.detail) {
+															editor.detail.shortName = "detail_" + e;
+															editor.detail.routeToken = e;
+															promises.push(dataSource.create(editor.detail));
+														}
 													}
 													break;
 												case "lookups":
