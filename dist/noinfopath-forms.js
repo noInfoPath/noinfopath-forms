@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.21
+* @version 1.0.22
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -802,6 +802,12 @@
 															editor.edit.shortName = "edit_" + e;
 															editor.edit.routeToken = e;
 															promises.push(dataSource.create(editor.edit));
+														}
+
+														if (editor.detail) {
+															editor.detail.shortName = "detail_" + e;
+															editor.detail.routeToken = e;
+															promises.push(dataSource.create(editor.detail));
 														}
 													}
 													break;
