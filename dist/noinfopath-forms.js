@@ -1,6 +1,6 @@
 /**
 * # noinfopath.forms
-* @version 1.0.22
+* @version 1.0.23
 *
 * Combines the functionality of validation from bootstrap and angular.
 *
@@ -103,11 +103,11 @@
 
 				var readOnly, primaryComponent, primaryComponentObject, entityName;
 
-				if (config && config.noNavBar && config.noNavBar.scopeKey && config.noNavBar.scopeKey.readOnly){
+				if (config && config.noNavBar && config.noNavBar.scopeKey && config.noNavBar.scopeKey.readOnly) {
 					primaryComponent = config.noForm.primaryComponent;
 					readOnly = "noReset_" + primaryComponent;
 
-					if(primaryComponent){
+					if (primaryComponent) {
 						primaryComponentObject = config.noForm.noComponents[primaryComponent];
 						entityName = primaryComponentObject.noDataSource.entityName;
 						scope[readOnly] = angular.merge(scope[readOnly], results[entityName]);
@@ -197,10 +197,26 @@
 						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
 
 						scope.$on("noSubmit::success", function(e, resp) {
-							var nb = resp.config.noNavBar;
-							if(nb && nb.routes && nb.routes.afterSave){
-								$state.go(nb.routes.afterSave);
-							}else{
+							var nb = resp.config.route.data.noNavBar;
+							if (nb && nb.routes && nb.routes.afterSave) {
+								if (angular.isObject(nb.routes.afterSave)) {
+									var params = {};
+
+									for (var pk in nb.routes.afterSave.params) {
+										var param = nb.routes.afterSave.params[pk],
+											prov = scope,
+											val = noInfoPath.getItem(prov, param.property);
+
+										params[param.name] = val;
+									}
+
+									$state.go(nb.routes.afterSave.toState, params);
+
+								} else {
+									$state.go(nb.routes.afterSave);
+								}
+
+							} else {
 								//Assume we are in edit mode.
 								this.showNavBar(this.navBarNames.READONLY);
 							}
@@ -209,14 +225,14 @@
 						scope.$on("noReset::click", function(config) {
 							//Assume we are in edit mode.
 							var nb = config.noNavBar;
-							if(nb && nb.routes && nb.routes.afterSave){
+							if (nb && nb.routes && nb.routes.afterSave) {
 								$state.go(nb.routes.afterSave);
-							}else{
+							} else {
 								//Assume we are in edit mode.
 								this.showNavBar(this.navBarNames.READONLY);
 							}
 						}.bind(noFormConfig, config));
-						
+
 					});
 
 				scope.waitingFor = {};
@@ -321,16 +337,16 @@
 	var stateProvider;
 
 	angular.module("noinfopath.forms")
-		.config(["$stateProvider", function($stateProvider){
+		.config(["$stateProvider", function($stateProvider) {
 			stateProvider = $stateProvider;
 		}])
 
-		.run(["$rootScope", function($rootScope) {
-			$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
-				//console.log("$stateChangeSuccess");
-				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
-				event.currentScope.$root.noNav[fromState.name] = fromParams;
-			});
+	.run(["$rootScope", function($rootScope) {
+		$rootScope.$on('$stateChangeSuccess', function(event, toState, toParams, fromState, fromParams) {
+			//console.log("$stateChangeSuccess");
+			event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
+			event.currentScope.$root.noNav[fromState.name] = fromParams;
+		});
 
 		}])
 
@@ -338,13 +354,13 @@
 
 		function _link(scope, el, attrs) {
 			var navFns = {
-					"home": function() {
-						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav);
+					"home": function(nbCfg) {
+						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav);
 
 						$state.go(route);
 					},
-					"back": function() {
-						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
+					"back": function(nbCfg) {
+						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
 							// params = {
 							// 	entity: $state.params.entity
 							// };
@@ -355,18 +371,18 @@
 					"writeable": function() {
 						noFormConfig.showNavBar(noFormConfig.navBarNames.WRITEABLE);
 					},
-					"new": function() {
-						var route = noInfoPath.getItem(config.noNavBar.routes, attrs.noNav),
+					"new": function(nbCfg) {
+						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
 							params = scope.$root.noNav[route];
 
 						params = params ? params : {};
 
 						params.entity = $state.params.entity;
-                        if (attrs.noNav === "new" && route == "vd.entity.edit") {
-                            params.id = "";
-                        } else {
-                            params = $state.params;
-                        }
+						if (attrs.noNav === "new" && route == "vd.entity.edit") {
+							params.id = "";
+						} else {
+							params = $state.params;
+						}
 
 						//console.log(route, params);
 						if (route) $state.go(route, params);
@@ -395,7 +411,8 @@
 				if (!navFn) navFn = navFns["undefined"];
 
 				//navFn(config.noNavBar.routes[navFnKey], $state.params);
-				navFn();
+
+				navFn(config.noNavBar || config.route.data.noNavBar);
 			}
 
 			function finish() {
@@ -421,10 +438,10 @@
 
 	.directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
 		var navNames = {
-				search: "search",
-				edit: "edit",
-				basic: "basic"
-			};
+			search: "search",
+			edit: "edit",
+			basic: "basic"
+		};
 
 		function _link(scope, el, attrs) {
 			var config, html;
@@ -437,19 +454,28 @@
 
 			function getTemplate() {
 
-				function templateUrl(tplKey) {
-					return "navbars/no-navbar-" + tplKey + ".tpl.html";
+				function templateUrl(tplKey, nbCfg) {
+					var url = "navbars/no-navbar-basic.tpl.html";
+
+					if (tplKey) {
+						url = "navbars/no-navbar-" + tplKey + ".tpl.html";
+					} else if (nbCfg && nbCfg.templateUrl) {
+						url = nbCfg.templateUrl;
+					}
+
+					return url;
 				}
 
-				var tplKey = noFormConfig.navBarKeyFromState($state.current.name),
-					tplUrl = templateUrl(tplKey);
+				var nbCfg = config.noNavBar || config.route.data.noNavBar,
+					tplKey = noFormConfig.navBarKeyFromState($state.current.name),
+					tplUrl = templateUrl(tplKey, nbCfg);
 
 				return $http.get(tplUrl)
 					.then(function(resp) {
 						html = resp.data;
 						if (tplKey === navNames.edit) {
-							html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, config.noNavBar.scopeKey.readOnly);
-							html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, config.noNavBar.scopeKey.writeable);
+							html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, nbCfg.scopeKey.readOnly);
+							html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
 						}
 						html = $compile(html)(scope);
 						el.html(html);
@@ -496,22 +522,24 @@
 		};
 	}])
 
-	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state){
-		this.configure = function(){
-			return $q(function(resolve, reject){
+	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state) {
+		this.configure = function() {
+			return $q(function(resolve, reject) {
 				var routes;
 
-				function saveRoutes(resp){
+				function saveRoutes(resp) {
 					routes = resp.data;
 
 					return $q.when(true);
 				}
 
-				function configureStates(){
-					for(var r in routes){
+				function configureStates() {
+					for (var r in routes) {
 						var route = routes[r];
 
-						route.data = { entities: {} };
+						route.data = angular.merge({
+							entities: {}
+						}, route.data);
 
 						stateProvider.state(route.name, route);
 					}
@@ -525,8 +553,7 @@
 					.catch(reject);
 			});
 		};
-	}])
-	;
+	}]);
 })(angular);
 
 //validation.js
@@ -781,7 +808,7 @@
 									for (var f in forms) {
 										var frm = forms[f];
 
-										if(frm.areas){
+										if (frm.areas) {
 											var areas = frm.areas;
 											for (var na in areas) {
 												var newForm = areas[na];
@@ -854,7 +881,7 @@
 
 			function getNavBarConfig() {
 
-				if(cacheNavBar){
+				if (cacheNavBar) {
 					noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
 				}
 
@@ -897,35 +924,35 @@
 			};
 
 			this.getFormByRoute = function(routeName, entityName) {
-				if(entityName){ // This is here to prevent a regression.
+				if (entityName) { // This is here to prevent a regression.
 					return getRoute("[route.name+routeToken]", [routeName, entityName]);
 				} else {
 					return getRoute("route.name", routeName);
 				}
 			};
 
-			function getRoute(routeKey, routeData){
+			function getRoute(routeKey, routeData) {
 				var requestInProgress = "requestInProgress",
-					scopeKey = angular.isArray(routeData) ? routeData.join("").replace(/\./g,"") : routeData.replace(/\./g,""),
+					scopeKey = angular.isArray(routeData) ? routeData.join("").replace(/\./g, "") : routeData.replace(/\./g, ""),
 					form = $rootScope.noFormConfig[scopeKey],
 					isInProgress = form === requestInProgress,
 					haveDataAlready = angular.isObject(form),
 					waitingFor;
 
-				if(isInProgress) {
-					return $q(function(resolve, reject){
-						waitingFor = $rootScope.$watch("noFormConfig." + scopeKey, function(n, o){
-							if(n && n !== requestInProgress){
+				if (isInProgress) {
+					return $q(function(resolve, reject) {
+						waitingFor = $rootScope.$watch("noFormConfig." + scopeKey, function(n, o) {
+							if (n && n !== requestInProgress) {
 								waitingFor();
 								resolve(n);
 							}
 						});
 					});
-				} else if(haveDataAlready) {
+				} else if (haveDataAlready) {
 					return $q.when(form);
 				} else {
 					$rootScope.noFormConfig[scopeKey] = requestInProgress;
-					return $q(function(resolve, reject){
+					return $q(function(resolve, reject) {
 						dataSource.entity
 							.where(routeKey)
 							.equals(routeData)
@@ -940,13 +967,15 @@
 			}
 
 			function navBarRoute(stateName) {
-				var route = SELF.noNavBarRoutes[stateName];
+				var route;
 
-				route = route ? route : SELF.noNavBarRoutes[undefined];
+				if (SELF.noNavBarRoutes) {
+					route = SELF.noNavBarRoutes[stateName];
+					route = route ? route : SELF.noNavBarRoutes[undefined];
+				}
 
 				return route;
 			}
-
 
 			function navBarEntityIDFromState(route, params) {
 				var id;
@@ -969,12 +998,42 @@
 
 				return navBar;
 			}
-			this.navBarKeyFromState = function(stateName) {
-				var navBarKey = navBarRoute(stateName)
-					.type;
 
-				return navBarKey;
+			this.navBarKeyFromState = function(stateName) {
+				var nbr = navBarRoute(stateName);
+				return nbr ? nbr.type : undefined;
 			};
+
+			//this.showNavBar = function(navBarName) {
+
+
+			//if (!navBarKey) throw "navBarKey is a required parameter";
+
+
+
+			// var noNavBar = $state.current.data ? $state.current.data.noNavBar : undefined;
+			// if (noNavBar) {
+			// 	var el = angular.element("no-nav-bar");
+			// 	el.find("[no-navbar]")
+			// 		.addClass("ng-hide");
+			// 	el.find("[no-navbar='" + noNavBar.display + "']")
+			// 		.removeClass("ng-hide");
+
+			//Make form readonly when required.
+			// switch (targetNavBar) {
+			// 	case this.navBarNames.READONLY:
+			// 		angular.element(".no-editor-cover")
+			// 			.removeClass("ng-hide");
+			// 		break;
+			// 	case this.navBarNames.WRITEABLE:
+			// 	case this.navBarNames.CREATE:
+			// 		angular.element(".no-editor-cover")
+			// 			.addClass("ng-hide");
+			// 		break;
+			// }
+
+			//}
+			//};
 
 			this.showNavBar = function(navBarName) {
 				//if (!navBarKey) throw "navBarKey is a required parameter";
