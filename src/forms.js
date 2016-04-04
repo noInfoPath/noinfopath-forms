@@ -87,11 +87,11 @@
 
 				var readOnly, primaryComponent, primaryComponentObject, entityName;
 
-				if (config && config.noNavBar && config.noNavBar.scopeKey && config.noNavBar.scopeKey.readOnly){
+				if (config && config.noNavBar && config.noNavBar.scopeKey && config.noNavBar.scopeKey.readOnly) {
 					primaryComponent = config.noForm.primaryComponent;
 					readOnly = "noReset_" + primaryComponent;
 
-					if(primaryComponent){
+					if (primaryComponent) {
 						primaryComponentObject = config.noForm.noComponents[primaryComponent];
 						entityName = primaryComponentObject.noDataSource.entityName;
 						scope[readOnly] = angular.merge(scope[readOnly], results[entityName]);
@@ -181,10 +181,26 @@
 						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
 
 						scope.$on("noSubmit::success", function(e, resp) {
-							var nb = resp.config.noNavBar;
-							if(nb && nb.routes && nb.routes.afterSave){
-								$state.go(nb.routes.afterSave);
-							}else{
+							var nb = resp.config.route.data.noNavBar;
+							if (nb && nb.routes && nb.routes.afterSave) {
+								if (angular.isObject(nb.routes.afterSave)) {
+									var params = {};
+
+									for (var pk in nb.routes.afterSave.params) {
+										var param = nb.routes.afterSave.params[pk],
+											prov = scope,
+											val = noInfoPath.getItem(prov, param.property);
+
+										params[param.name] = val;
+									}
+
+									$state.go(nb.routes.afterSave.toState, params);
+
+								} else {
+									$state.go(nb.routes.afterSave);
+								}
+
+							} else {
 								//Assume we are in edit mode.
 								this.showNavBar(this.navBarNames.READONLY);
 							}
@@ -193,14 +209,14 @@
 						scope.$on("noReset::click", function(config) {
 							//Assume we are in edit mode.
 							var nb = config.noNavBar;
-							if(nb && nb.routes && nb.routes.afterSave){
+							if (nb && nb.routes && nb.routes.afterSave) {
 								$state.go(nb.routes.afterSave);
-							}else{
+							} else {
 								//Assume we are in edit mode.
 								this.showNavBar(this.navBarNames.READONLY);
 							}
 						}.bind(noFormConfig, config));
-						
+
 					});
 
 				scope.waitingFor = {};

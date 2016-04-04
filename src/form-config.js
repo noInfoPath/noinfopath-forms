@@ -38,7 +38,7 @@
 									for (var f in forms) {
 										var frm = forms[f];
 
-										if(frm.areas){
+										if (frm.areas) {
 											var areas = frm.areas;
 											for (var na in areas) {
 												var newForm = areas[na];
@@ -111,7 +111,7 @@
 
 			function getNavBarConfig() {
 
-				if(cacheNavBar){
+				if (cacheNavBar) {
 					noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
 				}
 
@@ -154,35 +154,35 @@
 			};
 
 			this.getFormByRoute = function(routeName, entityName) {
-				if(entityName){ // This is here to prevent a regression.
+				if (entityName) { // This is here to prevent a regression.
 					return getRoute("[route.name+routeToken]", [routeName, entityName]);
 				} else {
 					return getRoute("route.name", routeName);
 				}
 			};
 
-			function getRoute(routeKey, routeData){
+			function getRoute(routeKey, routeData) {
 				var requestInProgress = "requestInProgress",
-					scopeKey = angular.isArray(routeData) ? routeData.join("").replace(/\./g,"") : routeData.replace(/\./g,""),
+					scopeKey = angular.isArray(routeData) ? routeData.join("").replace(/\./g, "") : routeData.replace(/\./g, ""),
 					form = $rootScope.noFormConfig[scopeKey],
 					isInProgress = form === requestInProgress,
 					haveDataAlready = angular.isObject(form),
 					waitingFor;
 
-				if(isInProgress) {
-					return $q(function(resolve, reject){
-						waitingFor = $rootScope.$watch("noFormConfig." + scopeKey, function(n, o){
-							if(n && n !== requestInProgress){
+				if (isInProgress) {
+					return $q(function(resolve, reject) {
+						waitingFor = $rootScope.$watch("noFormConfig." + scopeKey, function(n, o) {
+							if (n && n !== requestInProgress) {
 								waitingFor();
 								resolve(n);
 							}
 						});
 					});
-				} else if(haveDataAlready) {
+				} else if (haveDataAlready) {
 					return $q.when(form);
 				} else {
 					$rootScope.noFormConfig[scopeKey] = requestInProgress;
-					return $q(function(resolve, reject){
+					return $q(function(resolve, reject) {
 						dataSource.entity
 							.where(routeKey)
 							.equals(routeData)
@@ -197,13 +197,15 @@
 			}
 
 			function navBarRoute(stateName) {
-				var route = SELF.noNavBarRoutes[stateName];
+				var route;
 
-				route = route ? route : SELF.noNavBarRoutes[undefined];
+				if (SELF.noNavBarRoutes) {
+					route = SELF.noNavBarRoutes[stateName];
+					route = route ? route : SELF.noNavBarRoutes[undefined];
+				}
 
 				return route;
 			}
-
 
 			function navBarEntityIDFromState(route, params) {
 				var id;
@@ -226,12 +228,42 @@
 
 				return navBar;
 			}
-			this.navBarKeyFromState = function(stateName) {
-				var navBarKey = navBarRoute(stateName)
-					.type;
 
-				return navBarKey;
+			this.navBarKeyFromState = function(stateName) {
+				var nbr = navBarRoute(stateName);
+				return nbr ? nbr.type : undefined;
 			};
+
+			//this.showNavBar = function(navBarName) {
+
+
+			//if (!navBarKey) throw "navBarKey is a required parameter";
+
+
+
+			// var noNavBar = $state.current.data ? $state.current.data.noNavBar : undefined;
+			// if (noNavBar) {
+			// 	var el = angular.element("no-nav-bar");
+			// 	el.find("[no-navbar]")
+			// 		.addClass("ng-hide");
+			// 	el.find("[no-navbar='" + noNavBar.display + "']")
+			// 		.removeClass("ng-hide");
+
+			//Make form readonly when required.
+			// switch (targetNavBar) {
+			// 	case this.navBarNames.READONLY:
+			// 		angular.element(".no-editor-cover")
+			// 			.removeClass("ng-hide");
+			// 		break;
+			// 	case this.navBarNames.WRITEABLE:
+			// 	case this.navBarNames.CREATE:
+			// 		angular.element(".no-editor-cover")
+			// 			.addClass("ng-hide");
+			// 		break;
+			// }
+
+			//}
+			//};
 
 			this.showNavBar = function(navBarName) {
 				//if (!navBarKey) throw "navBarKey is a required parameter";
