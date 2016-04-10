@@ -65,12 +65,6 @@
 				},
 				config, html;
 
-			function saveConfig(c) {
-				config = c;
-				//console.log(config);
-				return $q.when(config);
-			}
-
 			function click() {
 				var navFnKey = attrs.noNav,
 					navFn = navFns[navFnKey];
@@ -82,16 +76,9 @@
 				navFn(config.noNavBar || config.route.data.noNavBar);
 			}
 
-			function finish() {
-				el.click(click);
-			}
+			config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope);
 
-			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-				.then(saveConfig)
-				.then(finish)
-				.catch(function(err) {
-					console.error(err);
-				});
+			el.click(click);
 
 
 		}
@@ -110,71 +97,77 @@
 			basic: "basic"
 		};
 
-		function _link(scope, el, attrs) {
-			var config, html;
+		function getTemplateUrl(elem, attr) {
+			var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity);
 
-			function saveConfig(c) {
-				config = c;
-				//console.log(config);
-				return $q.when(config);
+			var url = "navbars/no-navbar-basic.tpl.html",
+				nbCfg = config.noNavBar || config.route.data.noNavBar,
+				tplKey = noFormConfig.navBarKeyFromState($state.current.name);
+
+			if (tplKey) {
+				url = "navbars/no-navbar-" + tplKey + ".tpl.html";
+			} else if (nbCfg && nbCfg.templateUrl) {
+				url = nbCfg.templateUrl;
 			}
 
-			function getTemplate() {
+			return url;
+		}
 
-				function templateUrl(tplKey, nbCfg) {
-					var url = "navbars/no-navbar-basic.tpl.html";
+		function getTemplate() {
 
-					if (tplKey) {
-						url = "navbars/no-navbar-" + tplKey + ".tpl.html";
-					} else if (nbCfg && nbCfg.templateUrl) {
-						url = nbCfg.templateUrl;
+
+
+			var nbCfg = config.noNavBar || config.route.data.noNavBar,
+				tplKey = noFormConfig.navBarKeyFromState($state.current.name),
+				tplUrl = templateUrl(tplKey, nbCfg);
+
+			return $http.get(tplUrl)
+				.then(function(resp) {
+					html = resp.data;
+					if (tplKey === navNames.edit) {
+						html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, nbCfg.scopeKey.readOnly);
+						html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
 					}
-
-					return url;
-				}
-
-				var nbCfg = config.noNavBar || config.route.data.noNavBar,
-					tplKey = noFormConfig.navBarKeyFromState($state.current.name),
-					tplUrl = templateUrl(tplKey, nbCfg);
-
-				return $http.get(tplUrl)
-					.then(function(resp) {
-						html = resp.data;
-						if (tplKey === navNames.edit) {
-							html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, nbCfg.scopeKey.readOnly);
-							html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
-						}
-						html = $compile(html)(scope);
-						el.html(html);
-						return;
-					})
-					.catch(function(err) {
-						if (err.status === 404) {
-							throw "noFormConfig could not locate the file `navbars/no-nav-bar.json`.";
-						} else {
-							throw err;
-						}
-					});
-
-			}
-
-			function finish() {
-				noFormConfig.showNavBar();
-			}
-
-			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-				.then(saveConfig)
-				.then(getTemplate)
-				.then(finish)
+					html = $compile(html)(scope);
+					el.html(html);
+					return;
+				})
 				.catch(function(err) {
-					console.error(err);
+					if (err.status === 404) {
+						throw "noFormConfig could not locate the file `navbars/no-nav-bar.json`.";
+					} else {
+						throw err;
+					}
 				});
+
+		}
+
+		function _link(scope, el, attrs) {
+			noFormConfig.showNavBar();
+		}
+
+		function _compile(el, attrs) {
+			var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity),
+				writeable = el.find("[no-navbar='writeable']"),
+				noReset = writeable.find("[no-reset='{{noNavBar.scopeKey.writeable}}']"),
+				nbCfg = config.noNavBar || config.route.data.noNavBar,
+				tplKey = noFormConfig.navBarKeyFromState($state.current.name);
+
+
+			if (tplKey === navNames.edit) {
+				noReset.attr("no-reset", nbCfg.scopeKey.writeable);
+				// html = noReset.html().replace(/{noNavBar\.scopeKey\.readOnly}/g, );
+				// html = noReset.html().replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
+			}
+
+			return _link;
 		}
 
 		return {
 			restrict: "E",
 			scope: false,
-			link: _link
+			compile: _compile,
+			templateUrl: getTemplateUrl
 		};
 	}])
 
