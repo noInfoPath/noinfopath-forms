@@ -2,6 +2,38 @@
 (function(angular, undefined) {
 	"use strict";
 
+	function NoGrowler($timeout) {
+		this.success = false;
+		this.error = false;
+
+		this.reset = function() {
+			this.success = false;
+			this.error = false;
+		}.bind(this);
+
+		this.growl = function(messageType, timeoutVal) {
+			this[messageType] = true;
+			$timeout(this.reset, timeoutVal || 5000);
+		}.bind(this);
+	}
+
+	function NoGrowlerDirective($timeout) {
+
+		function getTemplateUrl() {
+			return "navbars/growler.html";
+		}
+
+		function _link(scope, el, attrs) {
+			scope.noGrowler = new NoGrowler($timeout);
+		}
+
+		return {
+			restrict: "E",
+			templateUrl: getTemplateUrl,
+			link: _link
+		};
+	}
+
 	angular.module("noinfopath.forms")
 		/*
 		 *	## noForm : Directive
@@ -83,7 +115,8 @@
 
 			function _saveSuccessful(noTrans, scope, _, config, results) {
 
-				_growl(scope, "yeah"); //TODO: refactor _growl into a service.
+				//_growl(scope, "yeah"); //TODO: refactor _growl into a service.
+				scope.noGrowler.growl("success");
 
 				var readOnly, primaryComponent, primaryComponentObject, entityName;
 
@@ -94,7 +127,7 @@
 					if (primaryComponent) {
 						primaryComponentObject = config.noForm.noComponents[primaryComponent];
 						entityName = primaryComponentObject.noDataSource.entityName;
-						scope[readOnly] = angular.merge(scope[readOnly], results[entityName]);
+						scope[readOnly] = angular.merge(scope[readOnly] || {}, results[entityName]);
 					}
 				}
 
@@ -108,10 +141,19 @@
 
 			function _saveFailed(scope, err) {
 				console.error(err);
-				_growl(scope, "boo");
+				scope.noGrowler.growl("error");
 			}
 
-			function _save(config, _, e, elm, scope) {
+			function _save(config, _, e, elm, scope, timestamp) {
+				if (scope.saveTimestamp == timestamp) {
+					scope.saveTimestamp = undefined;
+					return;
+				} else {
+					scope.saveTimestamp = timestamp;
+				}
+
+				console.log("noForm::_save", timestamp);
+				e.preventDefault();
 				var noForm = config.noForm,
 					comp = noForm.noComponents[noForm.primaryComponent],
 					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
@@ -122,17 +164,17 @@
 					.catch(_saveFailed.bind(null, scope));
 			}
 
-			function _growl(scope, m) {
-				scope.noForm[m] = true;
-
-				$timeout(function() {
-					scope.noForm = {
-						yeah: false,
-						boo: false
-					};
-				}, 5000);
-
-			}
+			// function _growl(scope, m) {
+			// 	scope.noForm[m] = true;
+			//
+			// 	$timeout(function() {
+			// 		scope.noForm = {
+			// 			yeah: false,
+			// 			boo: false
+			// 		};
+			// 	}, 5000);
+			//
+			// }
 
 			function _notify(scope, _, noForm, routeParams, e, data) {
 				//console.log(noForm, routeParams, data);
@@ -152,72 +194,71 @@
 				}
 			}
 
+			function _finish(config, scope) {
+
+				var primaryComponent;
+				/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+
+				var noForm = config.noForm;
+
+				for (var c in config.noComponents) {
+					var comp = config.noComponents[c];
+
+					if (comp.scopeKey) {
+						if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
+							scope.waitingFor[comp.scopeKey] = true;
+						}
+					}
+
+				}
+
+				scope.$on("noSubmit::dataReady", _save.bind(null, config, _));
+
+				scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
+
+				scope.$on("noSubmit::success", function(e, resp) {
+					var nb = resp.config.noNavBar || resp.config.route.data.noNavBar;
+					if (nb && nb.routes && nb.routes.afterSave) {
+						if (angular.isObject(nb.routes.afterSave)) {
+							var params = {};
+
+							for (var pk in nb.routes.afterSave.params) {
+								var param = nb.routes.afterSave.params[pk],
+									prov = scope,
+									val = noInfoPath.getItem(prov, param.property);
+
+								params[param.name] = val;
+							}
+
+							$state.go(nb.routes.afterSave.toState, params);
+
+						} else {
+							$state.go(nb.routes.afterSave);
+						}
+
+					} else {
+						//Assume we are in edit mode.
+						this.showNavBar(this.navBarNames.READONLY);
+					}
+				}.bind(noFormConfig));
+
+				scope.$on("noReset::click", function(config) {
+					//Assume we are in edit mode.
+					var nb = config.noNavBar;
+					if (nb && nb.routes && nb.routes.afterSave) {
+						$state.go(nb.routes.afterSave);
+					} else {
+						//Assume we are in edit mode.
+						this.showNavBar(this.navBarNames.READONLY);
+					}
+				}.bind(noFormConfig, config));
+
+			}
+
 			function _link(scope, el, attrs, form, $t) {
-				var noForm;
 
 				scope.$validator = form;
 
-				noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-					.then(function(config) {
-
-						var primaryComponent;
-						/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
-
-						noForm = config.noForm;
-
-						for (var c in config.noComponents) {
-							var comp = config.noComponents[c];
-
-							if (comp.scopeKey) {
-								if (config.primaryComponent !== comp.scopeKey || (config.primaryComponent === comp.scopeKey && config.watchPrimaryComponent)) {
-									scope.waitingFor[comp.scopeKey] = true;
-								}
-							}
-
-						}
-
-						scope.$on("noSubmit::dataReady", _save.bind(null, config, _));
-
-						scope.$on("noSync::dataReceived", _notify.bind(null, scope, _, noForm, $state.params));
-
-						scope.$on("noSubmit::success", function(e, resp) {
-							var nb = resp.config.route.data.noNavBar;
-							if (nb && nb.routes && nb.routes.afterSave) {
-								if (angular.isObject(nb.routes.afterSave)) {
-									var params = {};
-
-									for (var pk in nb.routes.afterSave.params) {
-										var param = nb.routes.afterSave.params[pk],
-											prov = scope,
-											val = noInfoPath.getItem(prov, param.property);
-
-										params[param.name] = val;
-									}
-
-									$state.go(nb.routes.afterSave.toState, params);
-
-								} else {
-									$state.go(nb.routes.afterSave);
-								}
-
-							} else {
-								//Assume we are in edit mode.
-								this.showNavBar(this.navBarNames.READONLY);
-							}
-						}.bind(noFormConfig));
-
-						scope.$on("noReset::click", function(config) {
-							//Assume we are in edit mode.
-							var nb = config.noNavBar;
-							if (nb && nb.routes && nb.routes.afterSave) {
-								$state.go(nb.routes.afterSave);
-							} else {
-								//Assume we are in edit mode.
-								this.showNavBar(this.navBarNames.READONLY);
-							}
-						}.bind(noFormConfig, config));
-
-					});
 
 				scope.waitingFor = {};
 				scope.noFormReady = false;
@@ -241,6 +282,8 @@
 
 				});
 
+				_finish(noFormConfig.getFormByRoute($state.current.name, $state.params.entity), scope);
+
 			}
 
 			return {
@@ -254,63 +297,82 @@
 		}])
 
 	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
+
+		function getTemplateUrl(el, attrs) {
+			var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+			return url;
+		}
+
+		function _compile(el, attrs) {
+			if (attrs.scopeKey) {
+				var noForm = noFormConfig.getFormByRoute($state.current.name, $state.params.entity),
+					html = el.html(),
+					key = attrs.scopeKey.indexOf("{{") > -1 ? attrs.scopeKey.substr(2, attrs.scopeKey.length - 4) : attrs.scopeKey,
+					scopeKey = noInfoPath.getItem(noForm, key);
+
+				html = html.replace(/{scopeKey}/g, scopeKey);
+				//console.log(html);
+				el.html(html);
+			}
+
+			return _link;
+		}
+
 		function _link(scope, el, attrs) {
+			console.log(scope);
+			// function getTemplate() {
+			// 	var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+			//
+			// 	//console.log(scope.noRecordStatsTemplate);
+			//
+			// 	if (scope.noRecordStatsTemplate) {
+			// 		return $q.when(scope.noRecordStatsTemplate);
+			// 	} else {
+			// 		return $q(function(resolve, reject) {
+			// 			$http.get(url)
+			// 				.then(function(resp) {
+			// 					scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+			// 					resolve(scope.noRecordStatsTemplate);
+			// 				})
+			// 				.catch(function(err) {
+			// 					console.log(err);
+			// 					reject(err);
+			// 				});
+			// 		});
+			// 	}
+			// }
 
-			function getTemplate() {
-				var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+			// function _finish(config) {
+			// 	if (!config) throw "Form configuration not found for route " + $state.params.entity;
+			//
+			// 	getTemplate()
+			// 		.then(function(template) {
+			// 			var t = $compile(template)(scope);
+			// 			el.html(t);
+			// 		})
+			// 		.catch(function(err) {
+			// 			console.error(err);
+			// 		});
+			// }
+			//
+			// _finish();
 
-				//console.log(scope.noRecordStatsTemplate);
-
-				if (scope.noRecordStatsTemplate) {
-					return $q.when(scope.noRecordStatsTemplate);
-				} else {
-					return $q(function(resolve, reject) {
-						$http.get(url)
-							.then(function(resp) {
-								scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
-								resolve(scope.noRecordStatsTemplate);
-							})
-							.catch(function(err) {
-								console.log(err);
-								reject(err);
-							});
-					});
-				}
-			}
-
-			function _finish(config) {
-				if (!config) throw "Form configuration not found for route " + $state.params.entity;
-
-				getTemplate()
-					.then(function(template) {
-						var t = $compile(template)(scope);
-						el.html(t);
-					})
-					.catch(function(err) {
-						console.error(err);
-					});
-			}
-
-			noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope)
-				.then(_finish)
-				.catch(function(err) {
-					console.error(err);
-				});
 		}
 
 
 
 		var directive = {
 			restrict: "E",
-			link: _link
-
+			link: _link,
+			templateUrl: getTemplateUrl,
+			compile: _compile
 		};
 
 		return directive;
 
-	}])
+		}])
 
-	;
+	.directive("noGrowler", ["$timeout", NoGrowlerDirective]);
 
 
 })(angular);
