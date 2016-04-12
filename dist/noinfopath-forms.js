@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 1.2.1*
+ * @version 1.2.2*
  *
  * Combines the functionality of validation from bootstrap and angular.
  *
@@ -312,83 +312,83 @@
 			};
 		}])
 
-	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
 
-		function getTemplateUrl(el, attrs) {
-			var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
-			return url;
-		}
-
-		function _compile(el, attrs) {
-			if (attrs.scopeKey) {
-				var noForm = noFormConfig.getFormByRoute($state.current.name, $state.params.entity),
-					html = el.html(),
-					key = attrs.scopeKey.indexOf("{{") > -1 ? attrs.scopeKey.substr(2, attrs.scopeKey.length - 4) : attrs.scopeKey,
-					scopeKey = noInfoPath.getItem(noForm, key);
-
-				html = html.replace(/{scopeKey}/g, scopeKey);
-				//console.log(html);
-				el.html(html);
+			function getTemplateUrl(el, attrs) {
+				var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+				return url;
 			}
 
-			return _link;
-		}
+			function _compile(el, attrs) {
+				var noForm = noFormConfig.getFormByRoute($state.current.name, $state.params.entity);
+				if (attrs.scopeKey) {
+					var	html = el.html(),
+						key = attrs.scopeKey.indexOf("{{") > -1 ? attrs.scopeKey.substr(2, attrs.scopeKey.length - 4) : attrs.scopeKey,
+						scopeKey = noInfoPath.getItem(noForm, key);
 
-		function _link(scope, el, attrs) {
-			console.log(scope);
-			// function getTemplate() {
-			// 	var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
-			//
-			// 	//console.log(scope.noRecordStatsTemplate);
-			//
-			// 	if (scope.noRecordStatsTemplate) {
-			// 		return $q.when(scope.noRecordStatsTemplate);
-			// 	} else {
-			// 		return $q(function(resolve, reject) {
-			// 			$http.get(url)
-			// 				.then(function(resp) {
-			// 					scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
-			// 					resolve(scope.noRecordStatsTemplate);
-			// 				})
-			// 				.catch(function(err) {
-			// 					console.log(err);
-			// 					reject(err);
-			// 				});
-			// 		});
-			// 	}
-			// }
+					html = html.replace(/{scopeKey}/g, scopeKey);
+					//console.log(html);
+					el.html(html);
+				}
 
-			// function _finish(config) {
-			// 	if (!config) throw "Form configuration not found for route " + $state.params.entity;
-			//
-			// 	getTemplate()
-			// 		.then(function(template) {
-			// 			var t = $compile(template)(scope);
-			// 			el.html(t);
-			// 		})
-			// 		.catch(function(err) {
-			// 			console.error(err);
-			// 		});
-			// }
-			//
-			// _finish();
+				return _link.bind(null, noForm);
+			}
 
-		}
+			function _link(config, scope, el, attrs) {
+				console.log("nrs");
+				// function getTemplate() {
+				// 	var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+				//
+				// 	//console.log(scope.noRecordStatsTemplate);
+				//
+				// 	if (scope.noRecordStatsTemplate) {
+				// 		return $q.when(scope.noRecordStatsTemplate);
+				// 	} else {
+				// 		return $q(function(resolve, reject) {
+				// 			$http.get(url)
+				// 				.then(function(resp) {
+				// 					scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
+				// 					resolve(scope.noRecordStatsTemplate);
+				// 				})
+				// 				.catch(function(err) {
+				// 					console.log(err);
+				// 					reject(err);
+				// 				});
+				// 		});
+				// 	}
+				// }
+
+				// function _finish(config) {
+				// 	if (!config) throw "Form configuration not found for route " + $state.params.entity;
+				//
+				// 	getTemplate()
+				// 		.then(function(template) {
+				// 			var t = $compile(template)(scope);
+				// 			el.html(t);
+				// 		})
+				// 		.catch(function(err) {
+				// 			console.error(err);
+				// 		});
+				// }
+				//
+				// _finish();
+
+			}
 
 
 
-		var directive = {
-			restrict: "E",
-			link: _link,
-			templateUrl: getTemplateUrl,
-			compile: _compile
-		};
+			var directive = {
+				restrict: "E",
+				link: _link,
+				templateUrl: getTemplateUrl,
+				compile: _compile
+			};
 
-		return directive;
+			return directive;
 
-		}])
+			}])
 
-	.directive("noGrowler", ["$timeout", NoGrowlerDirective]);
+		.directive("noGrowler", ["$timeout", NoGrowlerDirective]);
 
 
 })(angular);
