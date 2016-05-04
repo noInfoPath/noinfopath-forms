@@ -116,7 +116,7 @@
 	 *
 	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
 	 */
-	.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+	.directive("noSubmit", ["$injector", "$rootScope", function($injector, $rootScope) {
 		return {
 			restrict: "A",
 			require: "?^form",
@@ -140,14 +140,14 @@
 				el.click(tmp);
 			}
 		};
-		}])
+	}])
 
 	/**
 	 * ## noReset
 	 *
 	 * When user clicks reset, form is reset to null state.
 	 */
-	.directive('noReset', ['$rootScope', function($rootScope) {
+	.directive("noReset", ["$rootScope", function($rootScope) {
 		return {
 			restrict: "A",
 			require: "?^^form",
@@ -172,14 +172,14 @@
 					scope[attr.noReset] = scope[rsetKey];
 					scope.$digest();
 
-					$rootScope.$broadcast("noReset::click");
+					$rootScope.$broadcast("noReset::click", attr.noResetNavbar);
 					form.$setPristine();
 					$rootScope.$broadcast("no::validate:reset");
 				}
-				el.bind('click', _reset.bind(null, ctrl));
+				el.bind("click", _reset.bind(null, ctrl));
 			}
 		};
-		}])
+	}])
 
 	.directive("noEnterKey", [function() {
 		function _enterPressed(el, scope, attr) {
@@ -206,8 +206,7 @@
 		};
 
 		return directive;
-		}])
-
+	}])
 
 	;
 })(angular);

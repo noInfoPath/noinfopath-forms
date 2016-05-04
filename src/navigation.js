@@ -15,7 +15,7 @@
 			event.currentScope.$root.noNav[fromState.name] = fromParams;
 		});
 
-		}])
+	}])
 
 	.directive("noNav", ["$q", "$state", "noFormConfig", function($q, $state, noFormConfig) {
 
@@ -61,7 +61,9 @@
 					"undo": function() {
 						noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
 					},
-					"undefined": function() {}
+					"undefined": function(navbar) {
+						noFormConfig.showNavBar(navbar); // default behaviour to attempt to navigate to new navbar
+					}
 				},
 				config, html;
 
@@ -69,7 +71,7 @@
 				var navFnKey = attrs.noNav,
 					navFn = navFns[navFnKey];
 
-				if (!navFn) navFn = navFns["undefined"];
+				if (!navFn) navFn = navFns["undefined"].bind(null, navFnKey);
 
 				//navFn(config.noNavBar.routes[navFnKey], $state.params);
 
@@ -90,7 +92,7 @@
 		};
 	}])
 
-	.directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
+	.directive("noNavBar", ["$q", "$compile", "noTemplateCache", "$state", "noFormConfig", function($q, $compile, noTemplateCache, $state, noFormConfig) {
 		var navNames = {
 			search: "search",
 			edit: "edit",
@@ -115,15 +117,13 @@
 
 		function getTemplate() {
 
-
-
 			var nbCfg = config.noNavBar || config.route.data.noNavBar,
 				tplKey = noFormConfig.navBarKeyFromState($state.current.name),
 				tplUrl = templateUrl(tplKey, nbCfg);
 
-			return $http.get(tplUrl)
+			return noTemplateCache.get(tplUrl)
 				.then(function(resp) {
-					html = resp.data;
+					html = resp; //resp.data
 					if (tplKey === navNames.edit) {
 						html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, nbCfg.scopeKey.readOnly);
 						html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
@@ -139,10 +139,13 @@
 						throw err;
 					}
 				});
-
 		}
 
 		function _link(scope, el, attrs) {
+			scope.$on("noTabs::Change", function(e, t, p) {
+				noFormConfig.btnBarChange(angular.element(t.html()).attr("btnbar"));
+			});
+
 			noFormConfig.showNavBar();
 		}
 

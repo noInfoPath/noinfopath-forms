@@ -1,13 +1,12 @@
 /**
  * # noinfopath.forms
- * @version 1.2.2*
+ * @version 1.2.3
  *
  * Combines the functionality of validation from bootstrap and angular.
  *
  */
 (function(angular, undefined) {
 	"use strict";
-
 
 	angular.module("noinfopath.forms", ["noinfopath"])
 
@@ -258,14 +257,18 @@
 					}
 				}.bind(noFormConfig));
 
-				scope.$on("noReset::click", function(config) {
+				scope.$on("noReset::click", function(config, e, navbar) {
 					//Assume we are in edit mode.
 					var nb = config.noNavBar;
 					if (nb && nb.routes && nb.routes.afterSave) {
 						$state.go(nb.routes.afterSave);
 					} else {
 						//Assume we are in edit mode.
-						this.showNavBar(this.navBarNames.READONLY);
+						if(navbar){
+							this.showNavBar(navbar);
+						} else {
+							this.showNavBar(this.navBarNames.READONLY);
+						}
 					}
 				}.bind(noFormConfig, config));
 
@@ -312,84 +315,44 @@
 			};
 		}])
 
-		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
+	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
 
-			function getTemplateUrl(el, attrs) {
-				var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
-				return url;
+		function getTemplateUrl(el, attrs) {
+			var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+			return url;
+		}
+
+		function _compile(el, attrs) {
+			var noForm = noFormConfig.getFormByRoute($state.current.name, $state.params.entity);
+			if (attrs.scopeKey) {
+				var html = el.html(),
+					key = attrs.scopeKey.indexOf("{{") > -1 ? attrs.scopeKey.substr(2, attrs.scopeKey.length - 4) : attrs.scopeKey,
+					scopeKey = noInfoPath.getItem(noForm, key);
+
+				html = html.replace(/{scopeKey}/g, scopeKey);
+				//console.log(html);
+				el.html(html);
 			}
 
-			function _compile(el, attrs) {
-				var noForm = noFormConfig.getFormByRoute($state.current.name, $state.params.entity);
-				if (attrs.scopeKey) {
-					var	html = el.html(),
-						key = attrs.scopeKey.indexOf("{{") > -1 ? attrs.scopeKey.substr(2, attrs.scopeKey.length - 4) : attrs.scopeKey,
-						scopeKey = noInfoPath.getItem(noForm, key);
+			return _link.bind(null, noForm);
+		}
 
-					html = html.replace(/{scopeKey}/g, scopeKey);
-					//console.log(html);
-					el.html(html);
-				}
+		function _link(config, scope, el, attrs) {
+			console.log("nrs");
+		}
 
-				return _link.bind(null, noForm);
-			}
+		var directive = {
+			restrict: "E",
+			link: _link,
+			templateUrl: getTemplateUrl,
+			compile: _compile
+		};
 
-			function _link(config, scope, el, attrs) {
-				console.log("nrs");
-				// function getTemplate() {
-				// 	var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
-				//
-				// 	//console.log(scope.noRecordStatsTemplate);
-				//
-				// 	if (scope.noRecordStatsTemplate) {
-				// 		return $q.when(scope.noRecordStatsTemplate);
-				// 	} else {
-				// 		return $q(function(resolve, reject) {
-				// 			$http.get(url)
-				// 				.then(function(resp) {
-				// 					scope.noRecordStatsTemplate = resp.data.replace(/{scopeKey}/g, attrs.scopeKey);
-				// 					resolve(scope.noRecordStatsTemplate);
-				// 				})
-				// 				.catch(function(err) {
-				// 					console.log(err);
-				// 					reject(err);
-				// 				});
-				// 		});
-				// 	}
-				// }
+		return directive;
 
-				// function _finish(config) {
-				// 	if (!config) throw "Form configuration not found for route " + $state.params.entity;
-				//
-				// 	getTemplate()
-				// 		.then(function(template) {
-				// 			var t = $compile(template)(scope);
-				// 			el.html(t);
-				// 		})
-				// 		.catch(function(err) {
-				// 			console.error(err);
-				// 		});
-				// }
-				//
-				// _finish();
+	}])
 
-			}
-
-
-
-			var directive = {
-				restrict: "E",
-				link: _link,
-				templateUrl: getTemplateUrl,
-				compile: _compile
-			};
-
-			return directive;
-
-			}])
-
-		.directive("noGrowler", ["$timeout", NoGrowlerDirective]);
-
+	.directive("noGrowler", ["$timeout", NoGrowlerDirective]);
 
 })(angular);
 
@@ -410,7 +373,7 @@
 			event.currentScope.$root.noNav[fromState.name] = fromParams;
 		});
 
-		}])
+	}])
 
 	.directive("noNav", ["$q", "$state", "noFormConfig", function($q, $state, noFormConfig) {
 
@@ -456,7 +419,9 @@
 					"undo": function() {
 						noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
 					},
-					"undefined": function() {}
+					"undefined": function(navbar) {
+						noFormConfig.showNavBar(navbar); // default behaviour to attempt to navigate to new navbar
+					}
 				},
 				config, html;
 
@@ -464,7 +429,7 @@
 				var navFnKey = attrs.noNav,
 					navFn = navFns[navFnKey];
 
-				if (!navFn) navFn = navFns["undefined"];
+				if (!navFn) navFn = navFns["undefined"].bind(null, navFnKey);
 
 				//navFn(config.noNavBar.routes[navFnKey], $state.params);
 
@@ -485,7 +450,7 @@
 		};
 	}])
 
-	.directive("noNavBar", ["$q", "$compile", "$http", "$state", "noFormConfig", function($q, $compile, $http, $state, noFormConfig) {
+	.directive("noNavBar", ["$q", "$compile", "noTemplateCache", "$state", "noFormConfig", function($q, $compile, noTemplateCache, $state, noFormConfig) {
 		var navNames = {
 			search: "search",
 			edit: "edit",
@@ -510,15 +475,13 @@
 
 		function getTemplate() {
 
-
-
 			var nbCfg = config.noNavBar || config.route.data.noNavBar,
 				tplKey = noFormConfig.navBarKeyFromState($state.current.name),
 				tplUrl = templateUrl(tplKey, nbCfg);
 
-			return $http.get(tplUrl)
+			return noTemplateCache.get(tplUrl)
 				.then(function(resp) {
-					html = resp.data;
+					html = resp; //resp.data
 					if (tplKey === navNames.edit) {
 						html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, nbCfg.scopeKey.readOnly);
 						html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
@@ -534,10 +497,13 @@
 						throw err;
 					}
 				});
-
 		}
 
 		function _link(scope, el, attrs) {
+			scope.$on("noTabs::Change", function(e, t, p) {
+				noFormConfig.btnBarChange(angular.element(t.html()).attr("btnbar"));
+			});
+
 			noFormConfig.showNavBar();
 		}
 
@@ -729,7 +695,7 @@
 	 *
 	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
 	 */
-	.directive('noSubmit', ['$injector', '$rootScope', function($injector, $rootScope) {
+	.directive("noSubmit", ["$injector", "$rootScope", function($injector, $rootScope) {
 		return {
 			restrict: "A",
 			require: "?^form",
@@ -753,14 +719,14 @@
 				el.click(tmp);
 			}
 		};
-		}])
+	}])
 
 	/**
 	 * ## noReset
 	 *
 	 * When user clicks reset, form is reset to null state.
 	 */
-	.directive('noReset', ['$rootScope', function($rootScope) {
+	.directive("noReset", ["$rootScope", function($rootScope) {
 		return {
 			restrict: "A",
 			require: "?^^form",
@@ -785,14 +751,14 @@
 					scope[attr.noReset] = scope[rsetKey];
 					scope.$digest();
 
-					$rootScope.$broadcast("noReset::click");
+					$rootScope.$broadcast("noReset::click", attr.noResetNavbar);
 					form.$setPristine();
 					$rootScope.$broadcast("no::validate:reset");
 				}
-				el.bind('click', _reset.bind(null, ctrl));
+				el.bind("click", _reset.bind(null, ctrl));
 			}
 		};
-		}])
+	}])
 
 	.directive("noEnterKey", [function() {
 		function _enterPressed(el, scope, attr) {
@@ -819,8 +785,7 @@
 		};
 
 		return directive;
-		}])
-
+	}])
 
 	;
 })(angular);
@@ -1093,6 +1058,26 @@
 
 	}
 
+
+	/**
+	 * @method NoFormConfigSync($q, $http, $rootScope, $state, noDataSource, noLocalStorage, noConfig)
+	 *
+	 * `NoFormConfigSync` is a class that has multiple methods hanging off of it that assists on
+	 * configuring route information from the no-forms.json file.
+	 *
+	 * @param
+	 *
+	 * |Name|Type|Description|
+	 * |----|----|-----------|
+	 * |$q|object|angular.js promise provider object|
+	 * |$http|object|angular.js http provider object|
+	 * |$rootScope|object|angular.js rootScope provider object|
+	 * |$state|object|ui-router state provider object|
+	 * |noDataSource|object|noInfoPath noDataSource object|
+	 * |noLocalStorage|object|noInfoPath noLocalStorage object|
+	 * |noConfig|object|noInfoPath noConfig object|
+	 *
+	 */
 	function NoFormConfigSync($q, $http, $rootScope, $state, noDataSource, noLocalStorage, noConfig) {
 		var SELF = this,
 			isDbPopulated = noLocalStorage.getItem("dbPopulated_NoInfoPath_dtc_v1"),
@@ -1114,7 +1099,22 @@
 			CREATE: "create"
 		};
 
+		/**
+		 * @method saveNoFormConfig(form)
+		 *
+		 * `saveNoFormConfig` saves the noForm configuration in local storage, and adds
+		 * the configuration to the noForm index object based on the routeKey.
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |form|object|An noForm object loaded from no-forms.json|
+		 *
+		 */
+
 		function saveNoFormConfig(form) {
+			if(!form) throw "form is a required parameter";
 			var guid = "noForm_" + nextKey++;
 
 			indexes.shortName[form.shortName] = guid;
@@ -1123,9 +1123,26 @@
 			noLocalStorage.setItem(guid, form);
 		}
 
+		/**
+		 * @method getFormConfig()
+		 *
+		 * `getFormConfig` checks to see if the routes from no-forms.json have
+		 * been configured, and if it has not, configures the routes found
+		 * within no-forms.json. It also saves some indexes into local storage.
+		 *
+		 * @param
+		 *
+		 * None
+		 *
+		 * @returns promise
+		 */
 		function getFormConfig() {
 			var promise;
 
+			/**
+			 * `getFormConfig` checks to see if the routes in no-forms.json are
+			 * configured.
+			 */
 			if (isDbPopulated) {
 				promise = $q.when(true);
 			} else {
@@ -1136,6 +1153,11 @@
 						.then(function(resp) {
 							var forms = resp.data;
 
+							/**
+							 * `getFormConfig` loops through each property in no-forms.json
+							 * and saves the route configuration in local storage based on
+							 * the routeKey.
+							 */
 							for (var f in forms) {
 								var frm = forms[f];
 
@@ -1213,12 +1235,35 @@
 			return promise;
 		}
 
+		/**
+		 * @method getNavBarConfig()
+		 *
+		 * `getNavBarConfig` returns a promise that will eventually provide the
+		 * navBarConfig object.
+		 *
+		 * @param
+		 *
+		 * None
+		 *
+		 * @returns promise
+		 */
 		function getNavBarConfig() {
 
+			/**
+			 * `getNavBarConfig` checks if the cacheNavBar flag is true, it
+			 * attempts to load the noNavBarConfig from local storage before
+			 * performing a $http.get request.
+			 */
 			if (cacheNavBar) {
 				noNavBarConfig = noLocalStorage.getItem("no-nav-bar");
 			}
 
+			/**
+			 * `getNavBarConfig` checks to see if noNavBarConfig was loaded from
+			 * local storage, and if it was not, it performs a $http.get request
+			 * to get the noNavBarConfig and then saves the configuration to
+			 * local storage.
+			 */
 			if (!noNavBarConfig) {
 				noNavBarConfig = $q(function(resolve, reject) {
 					$http.get("navbars/no-nav-bar.json")
@@ -1234,6 +1279,9 @@
 			return $q.when(noNavBarConfig);
 		}
 
+		/**
+		 * `NoFormConfigSync` exposes noNavBarConfig as the property noNavBarRoutes
+		 */
 		Object.defineProperties(this, {
 			"noNavBarRoutes": {
 				"get": function() {
@@ -1242,7 +1290,23 @@
 			}
 		});
 
+		/**
+		 * @method whenReady()
+		 *
+		 * `whenReady` returns the navBarConfig object after ensuring that the formConfig
+		 * and the navBarConfig has been loaded.
+		 *
+		 * @param
+		 *
+		 * None
+		 *
+		 * @returns object
+		 */
 		this.whenReady = function() {
+			/*
+			 * `whenReady` sets a flag based on noConfig's configuration to load/save
+			 * navBar configuration in local storage.
+			 */
 			cacheNavBar = noConfig.current ? noConfig.current.noCacheNoNavBar : false;
 
 			return getFormConfig()
@@ -1252,11 +1316,44 @@
 				});
 		};
 
+		/**
+		 * @method getFormByShortName(shortName)
+		 *
+		 * `getFormByShortName` gets a form configuration based on the name of the route
+		 * passed in.
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |shortName|string|Name of a route|
+		 *
+		 * @returns object
+		 */
 		this.getFormByShortName = function(shortName) {
+			if(!shortName) throw "shortName is a required parameter";
+
 			return getRoute("route.name", shortName);
 		};
 
+		/**
+		 * @method getFormByRoute(routeName, entityName)
+		 *
+		 * `getFormByRoute` gets the route based on the routeName passed into
+		 * the function. Returns a form configuration object.
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |routeName|string|The name of the route|
+		 * |entityName|string|(Optional) the entity name|
+		 *
+		 * @returns object
+		 */
 		this.getFormByRoute = function(routeName, entityName) {
+			if(!routeName) throw "routeName is a require parameter";
+
 			if (entityName) { // This is here to prevent a regression.
 				return getRoute("route.name+routeToken", routeName + "+" + entityName);
 			} else {
@@ -1264,6 +1361,20 @@
 			}
 		};
 
+		/**
+		 * @method getRoute(routeKey, routeData)
+		 *
+		 * `getRoute` returns the form configuration based on the routeKey and routeData
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |routeKey|string|The key to query local storage|
+		 * |routeData|string|Route data that matches the routeKey format|
+		 *
+		 * @returns object
+		 */
 		function getRoute(routeKey, routeData) {
 			var requestInProgress = "requestInProgress",
 				indexKey = "noForms_index_" + routeKey,
@@ -1278,6 +1389,20 @@
 			return formCfg;
 		}
 
+		/**
+		 * @method navBarRoute(stateName)
+		 *
+		 * `navBarRoute` returns the route based on the stateName passed in, and
+		 * if there is no route found for the stateName, returns a default route.
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |stateName|string|(Optional) A name of a state|
+		 *
+		 * @returns object
+		 */
 		function navBarRoute(stateName) {
 			var route;
 
@@ -1289,7 +1414,25 @@
 			return route;
 		}
 
+		/**
+		 * @method navBarEntityIDFromState(route, params)
+		 *
+		 * `navBarEntityIDFromState` returns the navbar id from the stateParams
+		 * passed in based on the route
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |route|object|A navBarRoute object|
+		 * |params|object|A ui-router stateParams object|
+		 *
+		 * @returns string
+		 */
 		function navBarEntityIDFromState(route, params) {
+			if (!route) throw "route is a required parameter";
+			if (!params) throw "params is a required parameter";
+
 			var id;
 
 			if (route.entityIdParam) {
@@ -1299,6 +1442,20 @@
 			return id;
 		}
 
+		/**
+		 * @method navBarNameFromState(state)
+		 *
+		 * `navBarNameFromState` returns the navbar name associated with a given
+		 * state and returns it.
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |state|object|A ui-router state object|
+		 *
+		 * @returns string
+		 */
 		function navBarNameFromState(state) {
 			if (!state) throw "state is a required parameter";
 
@@ -1311,34 +1468,111 @@
 			return navBar;
 		}
 
+		/**
+		 * @method navBarKeyFromState(stateName)
+		 *
+		 * `navBarKeyFromState` finds the navbar type associated with a given
+		 * state and returns it, and if there is not a navbar type, returns undefined
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |stateName|string|The name of the state to get the navBar type configured for it|
+		 *
+		 * @returns string || undefined
+		 *
+		 */
 		this.navBarKeyFromState = function(stateName) {
+			if (!stateName) throw "stateName is a required parameter";
+
 			var nbr = navBarRoute(stateName);
 			return nbr ? nbr.type : undefined;
 		};
 
+		/**
+		 * @method showNavBar(navBarName)
+		 *
+		 * `showNavBar` determines the navbar to display depending if a
+		 * navBarName has been passed into the function call, and defaults to
+		 * the navbar based on the current state if there was not.
+		 *
+		 * @param
+		 *
+		 * |Name|Type|Description|
+		 * |----|----|-----------|
+		 * |navBarName|string|(optional) The name of the navbar to be shown|
+		 *
+		 */
 		this.showNavBar = function(navBarName) {
-			//if (!navBarKey) throw "navBarKey is a required parameter";
 
 			var targetNavBar = navBarName ? navBarName : navBarNameFromState($state);
 
+			/*
+			 * `showNavBar` hides all the navbars within the template and then
+			 * shows the nav bar that matches the targetNavBar.
+			 */
 			var el = angular.element("no-nav-bar");
 			el.find("[no-navbar]")
 				.addClass("ng-hide");
 			el.find("[no-navbar='" + targetNavBar + "']")
 				.removeClass("ng-hide");
 
-			//Make form readonly when required.
-			switch (targetNavBar) {
-				case this.navBarNames.READONLY:
+			/*
+			 * `showNavBar` puts on a protective cover over the form when the
+			 * form is Read Only mode. When the mode is Writable or Create,
+			 * it removes the cover, enabling interaction with the form
+			 * components.
+			 */
+			var route = navBarRoute($state.current.name);
+
+			if(route.covers){
+				if(route.covers[targetNavBar]){
 					angular.element(".no-editor-cover")
 						.removeClass("ng-hide");
-					break;
-				case this.navBarNames.WRITEABLE:
-				case this.navBarNames.CREATE:
+				} else {
 					angular.element(".no-editor-cover")
 						.addClass("ng-hide");
+				}
+			} else {
+				switch (targetNavBar) {
+					case this.navBarNames.READONLY:
+						angular.element(".no-editor-cover")
+							.removeClass("ng-hide");
+						break;
+					case this.navBarNames.WRITEABLE:
+					case this.navBarNames.CREATE:
+						angular.element(".no-editor-cover")
+							.addClass("ng-hide");
+						break;
+				}
+			}
+		};
+
+		this.btnBarChange = function(btnBarID) {
+			var toID = noInfoPath.getItem($rootScope, "noFormConfig.curBtnBar"),
+				isEditing = noInfoPath.getItem($rootScope, "noFormConfig.isEditing");
+
+			if (toID === "editing" && !btnBarID) {
+				toID = noInfoPath.getItem($rootScope, "noFormConfig.curTab");
+			} else {
+				toID = btnBarID ? btnBarID : "default";
+			}
+
+
+			switch (btnBarID) {
+				case "editing":
+					noInfoPath.setItem($rootScope, "noFormConfig.isEditing", true);
+					break;
+				default:
+					if (isEditing) {
+						toID = "editing";
+					}
 					break;
 			}
+
+			noInfoPath.setItem($rootScope, "noFormConfig.curBtnBar", toID);
+			this.showNavBar(toID);
 		};
 
 	}
