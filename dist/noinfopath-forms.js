@@ -128,40 +128,47 @@
 		 */
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache, _) {
 
-			function _saveSuccessful(noTrans, scope, _, config, results) {
+			function _saveSuccessful(noTrans, scope, _, config, comp, el, results) {
 
-				//_growl(scope, "yeah"); //TODO: refactor _growl into a service.
 				scope.noGrowler.growl("success");
+				var resetButton = el.closest("no-form").find("no-nav-bar").children(":not(.ng-hide)").find("[no-reset]"),
+					entityName = comp.noDataSource.entityName,
+					readOnly, primaryComponent, primaryComponentObject;
 
-				var readOnly, primaryComponent, primaryComponentObject, entityName;
-
-				if (config && config.noNavBar && config.noNavBar.scopeKey && config.noNavBar.scopeKey.readOnly) {
-					primaryComponent = config.noForm.primaryComponent;
-					readOnly = "noReset_" + primaryComponent;
-
-					if (primaryComponent) {
-						primaryComponentObject = config.noForm.noComponents[primaryComponent];
-						entityName = primaryComponentObject.noDataSource.entityName;
-						scope[readOnly] = angular.merge(scope[readOnly] || {}, results[entityName]);
-					}
+				if (resetButton.attr("no-reset")) {
+					readOnly = "noReset_" + resetButton.attr("no-reset");
+					scope[readOnly] = angular.merge(scope[readOnly] || {}, results[entityName]);
 				}
 
+				// if (config && config.noNavBar && config.noNavBar.scopeKey && config.noNavBar.scopeKey.readOnly) {
+				// 	primaryComponent = config.noForm.primaryComponent;
+				// 	readOnly = "noReset_" + primaryComponent;
+				//
+				// 	if (primaryComponent) {
+				// 		primaryComponentObject = config.noForm.noComponents[primaryComponent];
+				// 		entityName = primaryComponentObject.noDataSource.entityName;
+				// 		scope[readOnly] = angular.merge(scope[readOnly] || {}, results[entityName]);
+				// 	}
+				// }
+
 				noTransactionCache.endTransaction(noTrans);
+				scope.saveTimestamp = undefined;
 				scope.$emit("noSubmit::success", {
 					config: config,
 					data: results,
-					state: $state
+					state: $state,
+					navbar: resetButton.attr("no-reset-navbar")
 				});
 			}
 
 			function _saveFailed(scope, err) {
 				console.error(err);
 				scope.noGrowler.growl("error");
+				scope.saveTimestamp = undefined;
 			}
 
 			function _save(config, _, e, elm, scope, timestamp) {
 				if (scope.saveTimestamp == timestamp) {
-					scope.saveTimestamp = undefined;
 					return;
 				} else {
 					scope.saveTimestamp = timestamp;
@@ -169,14 +176,17 @@
 
 				console.log("noForm::_save", timestamp);
 				e.preventDefault();
+
 				var noForm = config.noForm,
-					comp = noForm.noComponents[noForm.primaryComponent],
+					submitButton = elm.attr("no-submit"),
+					comp = noForm.noComponents[submitButton || noForm.primaryComponent],
 					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
 					data = scope[comp.scopeKey];
 
 				noTrans.upsert(data)
-					.then(_saveSuccessful.bind(null, noTrans, scope, _, config))
+					.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm))
 					.catch(_saveFailed.bind(null, scope));
+
 			}
 
 			// function _growl(scope, m) {
@@ -253,7 +263,11 @@
 
 					} else {
 						//Assume we are in edit mode.
-						this.showNavBar(this.navBarNames.READONLY);
+						if (resp.navbar) {
+							this.showNavBar(resp.navbar);
+						} else {
+							this.showNavBar(this.navBarNames.READONLY);
+						}
 					}
 				}.bind(noFormConfig));
 
@@ -264,7 +278,7 @@
 						$state.go(nb.routes.afterSave);
 					} else {
 						//Assume we are in edit mode.
-						if(navbar){
+						if (navbar) {
 							this.showNavBar(navbar);
 						} else {
 							this.showNavBar(this.navBarNames.READONLY);
@@ -748,7 +762,7 @@
 						form = new NoFormValidate(el);
 					}
 
-					scope[attr.noReset] = scope[rsetKey];
+					scope[attr.noReset] = angular.copy(scope[rsetKey]);
 					scope.$digest();
 
 					$rootScope.$broadcast("noReset::click", attr.noResetNavbar);
@@ -1143,7 +1157,7 @@
 			 * `getFormConfig` checks to see if the routes in no-forms.json are
 			 * configured.
 			 */
-			if (isDbPopulated) {
+			if (!noConfig.current.debug && isDbPopulated) {
 				promise = $q.when(true);
 			} else {
 				promise = $q(function(resolve, reject) {

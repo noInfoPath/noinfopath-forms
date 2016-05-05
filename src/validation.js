@@ -169,7 +169,7 @@
 						form = new NoFormValidate(el);
 					}
 
-					scope[attr.noReset] = scope[rsetKey];
+					scope[attr.noReset] = angular.copy(scope[rsetKey]);
 					scope.$digest();
 
 					$rootScope.$broadcast("noReset::click", attr.noResetNavbar);

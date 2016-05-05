@@ -351,7 +351,7 @@
 			 * `getFormConfig` checks to see if the routes in no-forms.json are
 			 * configured.
 			 */
-			if (isDbPopulated) {
+			if (!noConfig.current.debug && isDbPopulated) {
 				promise = $q.when(true);
 			} else {
 				promise = $q(function(resolve, reject) {
