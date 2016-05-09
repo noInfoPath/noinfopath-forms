@@ -1,5 +1,5 @@
 # noinfopath.forms
-@version 1.2.3
+@version 1.2.4
 
 Combines the functionality of validation from bootstrap and angular.
 
@@ -175,7 +175,7 @@ local storage.
 
 `NoFormConfigSync` exposes noNavBarConfig as the property noNavBarRoutes
 
-@method whenReady()
+@method whenReady() @deprecated
 
 `whenReady` returns the navBarConfig object after ensuring that the formConfig
 and the navBarConfig has been loaded.

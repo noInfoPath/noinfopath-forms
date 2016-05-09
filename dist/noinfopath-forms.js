@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 1.2.3
+ * @version 1.2.4
  *
  * Combines the functionality of validation from bootstrap and angular.
  *
@@ -128,7 +128,7 @@
 		 */
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache, _) {
 
-			function _saveSuccessful(noTrans, scope, _, config, comp, el, results) {
+			function _saveSuccessful(noTrans, scope, _, config, comp, el, noSubmitTarget, results) {
 
 				scope.noGrowler.growl("success");
 				var resetButton = el.closest("no-form").find("no-nav-bar").children(":not(.ng-hide)").find("[no-reset]"),
@@ -157,7 +157,8 @@
 					config: config,
 					data: results,
 					state: $state,
-					navbar: resetButton.attr("no-reset-navbar")
+					navbar: resetButton.attr("no-reset-navbar"),
+					target: noSubmitTarget
 				});
 			}
 
@@ -184,7 +185,7 @@
 					data = scope[comp.scopeKey];
 
 				noTrans.upsert(data)
-					.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm))
+					.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm, submitButton))
 					.catch(_saveFailed.bind(null, scope));
 
 			}
@@ -221,8 +222,10 @@
 
 			function _finish(config, scope) {
 
-				var primaryComponent;
+				var primaryComponent,
+					nb = config.noNavBar || config.route.data.noNavBar;
 				/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+				scope.noNavBar = nb;
 
 				var noForm = config.noForm;
 
@@ -476,7 +479,7 @@
 
 			var url = "navbars/no-navbar-basic.tpl.html",
 				nbCfg = config.noNavBar || config.route.data.noNavBar,
-				tplKey = noFormConfig.navBarKeyFromState($state.current.name);
+				tplKey = noFormConfig.navBarKeyFromState($state.current);
 
 			if (tplKey) {
 				url = "navbars/no-navbar-" + tplKey + ".tpl.html";
@@ -490,7 +493,7 @@
 		function getTemplate() {
 
 			var nbCfg = config.noNavBar || config.route.data.noNavBar,
-				tplKey = noFormConfig.navBarKeyFromState($state.current.name),
+				tplKey = noFormConfig.navBarKeyFromState($state.current),
 				tplUrl = templateUrl(tplKey, nbCfg);
 
 			return noTemplateCache.get(tplUrl)
@@ -526,7 +529,7 @@
 				writeable = el.find("[no-navbar='writeable']"),
 				noReset = writeable.find("[no-reset='{{noNavBar.scopeKey.writeable}}']"),
 				nbCfg = config.noNavBar || config.route.data.noNavBar,
-				tplKey = noFormConfig.navBarKeyFromState($state.current.name);
+				tplKey = noFormConfig.navBarKeyFromState($state.current);
 
 
 			if (tplKey === navNames.edit) {
@@ -1006,11 +1009,11 @@
 			}
 		}
 
-		function navBarRoute(stateName) {
-			var route;
+		function navBarRoute(state) {
+			var route = noInfoPath.getItem(state, "data.noNavBar");
 
-			if (SELF.noNavBarRoutes) {
-				route = SELF.noNavBarRoutes[stateName];
+			if (!route && SELF.noNavBarRoutes) {
+				route = SELF.noNavBarRoutes[state.name];
 				route = route ? route : SELF.noNavBarRoutes[undefined];
 			}
 
@@ -1030,8 +1033,8 @@
 		function navBarNameFromState(state) {
 			if (!state) throw "state is a required parameter";
 
-			var route = navBarRoute(state.current.name),
-				navBar = SELF.navBarKeyFromState(state.current.name),
+			var route = navBarRoute(state.current),
+				navBar = SELF.navBarKeyFromState(state.current),
 				id = navBarEntityIDFromState(route, state.params);
 
 			if (navBar === "edit") navBar = id ? "readonly" : "create";
@@ -1039,8 +1042,8 @@
 			return navBar;
 		}
 
-		this.navBarKeyFromState = function(stateName) {
-			var nbr = navBarRoute(stateName);
+		this.navBarKeyFromState = function(state) {
+			var nbr = navBarRoute(state);
 			return nbr ? nbr.type : undefined;
 		};
 
@@ -1305,7 +1308,7 @@
 		});
 
 		/**
-		 * @method whenReady()
+		 * @method whenReady() @deprecated
 		 *
 		 * `whenReady` returns the navBarConfig object after ensuring that the formConfig
 		 * and the navBarConfig has been loaded.
@@ -1417,11 +1420,11 @@
 		 *
 		 * @returns object
 		 */
-		function navBarRoute(stateName) {
-			var route;
+		function navBarRoute(state) {
+			var route = noInfoPath.getItem(state, "data.noNavBar");
 
-			if (SELF.noNavBarRoutes) {
-				route = SELF.noNavBarRoutes[stateName];
+			if (!route && SELF.noNavBarRoutes) {
+				route = SELF.noNavBarRoutes[state.name];
 				route = route ? route : SELF.noNavBarRoutes[undefined];
 			}
 
@@ -1473,8 +1476,8 @@
 		function navBarNameFromState(state) {
 			if (!state) throw "state is a required parameter";
 
-			var route = navBarRoute(state.current.name),
-				navBar = SELF.navBarKeyFromState(state.current.name),
+			var route = navBarRoute(state.current),
+				navBar = SELF.navBarKeyFromState(state.current),
 				id = navBarEntityIDFromState(route, state.params);
 
 			if (navBar === "edit") navBar = id ? "readonly" : "create";
@@ -1497,10 +1500,10 @@
 		 * @returns string || undefined
 		 *
 		 */
-		this.navBarKeyFromState = function(stateName) {
-			if (!stateName) throw "stateName is a required parameter";
+		this.navBarKeyFromState = function(state) {
+			if (!state) throw "state is a required parameter";
 
-			var nbr = navBarRoute(stateName);
+			var nbr = navBarRoute(state);
 			return nbr ? nbr.type : undefined;
 		};
 
@@ -1538,7 +1541,7 @@
 			 * it removes the cover, enabling interaction with the form
 			 * components.
 			 */
-			var route = navBarRoute($state.current.name);
+			var route = navBarRoute($state.current);
 
 			if(route.covers){
 				if(route.covers[targetNavBar]){

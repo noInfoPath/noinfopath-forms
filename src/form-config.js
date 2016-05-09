@@ -200,11 +200,11 @@
 			}
 		}
 
-		function navBarRoute(stateName) {
-			var route;
+		function navBarRoute(state) {
+			var route = noInfoPath.getItem(state, "data.noNavBar");
 
-			if (SELF.noNavBarRoutes) {
-				route = SELF.noNavBarRoutes[stateName];
+			if (!route && SELF.noNavBarRoutes) {
+				route = SELF.noNavBarRoutes[state.name];
 				route = route ? route : SELF.noNavBarRoutes[undefined];
 			}
 
@@ -224,8 +224,8 @@
 		function navBarNameFromState(state) {
 			if (!state) throw "state is a required parameter";
 
-			var route = navBarRoute(state.current.name),
-				navBar = SELF.navBarKeyFromState(state.current.name),
+			var route = navBarRoute(state.current),
+				navBar = SELF.navBarKeyFromState(state.current),
 				id = navBarEntityIDFromState(route, state.params);
 
 			if (navBar === "edit") navBar = id ? "readonly" : "create";
@@ -233,8 +233,8 @@
 			return navBar;
 		}
 
-		this.navBarKeyFromState = function(stateName) {
-			var nbr = navBarRoute(stateName);
+		this.navBarKeyFromState = function(state) {
+			var nbr = navBarRoute(state);
 			return nbr ? nbr.type : undefined;
 		};
 
@@ -499,7 +499,7 @@
 		});
 
 		/**
-		 * @method whenReady()
+		 * @method whenReady() @deprecated
 		 *
 		 * `whenReady` returns the navBarConfig object after ensuring that the formConfig
 		 * and the navBarConfig has been loaded.
@@ -611,11 +611,11 @@
 		 *
 		 * @returns object
 		 */
-		function navBarRoute(stateName) {
-			var route;
+		function navBarRoute(state) {
+			var route = noInfoPath.getItem(state, "data.noNavBar");
 
-			if (SELF.noNavBarRoutes) {
-				route = SELF.noNavBarRoutes[stateName];
+			if (!route && SELF.noNavBarRoutes) {
+				route = SELF.noNavBarRoutes[state.name];
 				route = route ? route : SELF.noNavBarRoutes[undefined];
 			}
 
@@ -667,8 +667,8 @@
 		function navBarNameFromState(state) {
 			if (!state) throw "state is a required parameter";
 
-			var route = navBarRoute(state.current.name),
-				navBar = SELF.navBarKeyFromState(state.current.name),
+			var route = navBarRoute(state.current),
+				navBar = SELF.navBarKeyFromState(state.current),
 				id = navBarEntityIDFromState(route, state.params);
 
 			if (navBar === "edit") navBar = id ? "readonly" : "create";
@@ -691,10 +691,10 @@
 		 * @returns string || undefined
 		 *
 		 */
-		this.navBarKeyFromState = function(stateName) {
-			if (!stateName) throw "stateName is a required parameter";
+		this.navBarKeyFromState = function(state) {
+			if (!state) throw "state is a required parameter";
 
-			var nbr = navBarRoute(stateName);
+			var nbr = navBarRoute(state);
 			return nbr ? nbr.type : undefined;
 		};
 
@@ -732,7 +732,7 @@
 			 * it removes the cover, enabling interaction with the form
 			 * components.
 			 */
-			var route = navBarRoute($state.current.name);
+			var route = navBarRoute($state.current);
 
 			if(route.covers){
 				if(route.covers[targetNavBar]){

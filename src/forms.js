@@ -113,7 +113,7 @@
 		 */
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', function($timeout, $q, $state, $injector, noConfig, noFormConfig, noLoginService, noTransactionCache, _) {
 
-			function _saveSuccessful(noTrans, scope, _, config, comp, el, results) {
+			function _saveSuccessful(noTrans, scope, _, config, comp, el, noSubmitTarget, results) {
 
 				scope.noGrowler.growl("success");
 				var resetButton = el.closest("no-form").find("no-nav-bar").children(":not(.ng-hide)").find("[no-reset]"),
@@ -142,7 +142,8 @@
 					config: config,
 					data: results,
 					state: $state,
-					navbar: resetButton.attr("no-reset-navbar")
+					navbar: resetButton.attr("no-reset-navbar"),
+					target: noSubmitTarget
 				});
 			}
 
@@ -169,7 +170,7 @@
 					data = scope[comp.scopeKey];
 
 				noTrans.upsert(data)
-					.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm))
+					.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm, submitButton))
 					.catch(_saveFailed.bind(null, scope));
 
 			}
@@ -206,8 +207,10 @@
 
 			function _finish(config, scope) {
 
-				var primaryComponent;
+				var primaryComponent,
+					nb = config.noNavBar || config.route.data.noNavBar;
 				/* = config.noComponents[noForm ? noForm.primaryComponent : config.primaryComponent],*/
+				scope.noNavBar = nb;
 
 				var noForm = config.noForm;
 
