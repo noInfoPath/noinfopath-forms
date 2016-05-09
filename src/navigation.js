@@ -104,7 +104,7 @@
 
 			var url = "navbars/no-navbar-basic.tpl.html",
 				nbCfg = config.noNavBar || config.route.data.noNavBar,
-				tplKey = noFormConfig.navBarKeyFromState($state.current.name);
+				tplKey = noFormConfig.navBarKeyFromState($state.current);
 
 			if (tplKey) {
 				url = "navbars/no-navbar-" + tplKey + ".tpl.html";
@@ -118,7 +118,7 @@
 		function getTemplate() {
 
 			var nbCfg = config.noNavBar || config.route.data.noNavBar,
-				tplKey = noFormConfig.navBarKeyFromState($state.current.name),
+				tplKey = noFormConfig.navBarKeyFromState($state.current),
 				tplUrl = templateUrl(tplKey, nbCfg);
 
 			return noTemplateCache.get(tplUrl)
@@ -154,7 +154,7 @@
 				writeable = el.find("[no-navbar='writeable']"),
 				noReset = writeable.find("[no-reset='{{noNavBar.scopeKey.writeable}}']"),
 				nbCfg = config.noNavBar || config.route.data.noNavBar,
-				tplKey = noFormConfig.navBarKeyFromState($state.current.name);
+				tplKey = noFormConfig.navBarKeyFromState($state.current);
 
 
 			if (tplKey === navNames.edit) {
