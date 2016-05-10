@@ -103,7 +103,7 @@
 			var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity);
 
 			var url = "navbars/no-navbar-basic.tpl.html",
-				nbCfg = config.noNavBar || config.route.data.noNavBar,
+				nbCfg = config.noNavBar || (config.route.data ? config.route.data.noNavBar: undefined),
 				tplKey = noFormConfig.navBarKeyFromState($state.current);
 
 			if (tplKey) {
@@ -153,7 +153,7 @@
 			var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity),
 				writeable = el.find("[no-navbar='writeable']"),
 				noReset = writeable.find("[no-reset='{{noNavBar.scopeKey.writeable}}']"),
-				nbCfg = config.noNavBar || config.route.data.noNavBar,
+				nbCfg = config.noNavBar ||  (config.route.data ? config.route.data.noNavBar: undefined),
 				tplKey = noFormConfig.navBarKeyFromState($state.current);
 
 
