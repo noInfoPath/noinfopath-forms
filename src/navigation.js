@@ -143,7 +143,12 @@
 
 		function _link(scope, el, attrs) {
 			scope.$on("noTabs::Change", function(e, t, p) {
-				noFormConfig.btnBarChange(angular.element(t.html()).attr("btnbar"));
+				var te = angular.element(t.html()),
+					ta = te.attr("btnbar");
+
+				if(ta){
+					noFormConfig.btnBarChange(ta);
+				}
 			});
 
 			noFormConfig.showNavBar();
