@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 1.2.4
+ * @version 1.2.6
  *
  * Combines the functionality of validation from bootstrap and angular.
  *
@@ -518,7 +518,12 @@
 
 		function _link(scope, el, attrs) {
 			scope.$on("noTabs::Change", function(e, t, p) {
-				noFormConfig.btnBarChange(angular.element(t.html()).attr("btnbar"));
+				var te = angular.element(t.html()),
+					ta = te.attr("btnbar");
+
+				if(ta){
+					noFormConfig.btnBarChange(ta);
+				}
 			});
 
 			noFormConfig.showNavBar();
