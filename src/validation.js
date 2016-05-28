@@ -128,12 +128,16 @@
 
 				function _submit(form, e) {
 					e.preventDefault();
-
-					if (form.$valid) {
+					if(attr.noValidate){
 						$rootScope.$broadcast("noSubmit::dataReady", el, scope, new Date());
-					} else {
-						$rootScope.$broadcast("no::validate", form.$valid);
+					}else{
+						if (form.$valid) {
+							$rootScope.$broadcast("noSubmit::dataReady", el, scope, new Date());
+						} else {
+							$rootScope.$broadcast("no::validate", form.$valid);
+						}
 					}
+
 				}
 
 				var tmp = _submit.bind(null, form);

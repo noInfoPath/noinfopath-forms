@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 1.2.6
+ * @version 1.2.7
  *
  * Combines the functionality of validation from bootstrap and angular.
  *
@@ -729,12 +729,16 @@
 
 				function _submit(form, e) {
 					e.preventDefault();
-
-					if (form.$valid) {
+					if(attr.noValidate){
 						$rootScope.$broadcast("noSubmit::dataReady", el, scope, new Date());
-					} else {
-						$rootScope.$broadcast("no::validate", form.$valid);
+					}else{
+						if (form.$valid) {
+							$rootScope.$broadcast("noSubmit::dataReady", el, scope, new Date());
+						} else {
+							$rootScope.$broadcast("no::validate", form.$valid);
+						}
 					}
+
 				}
 
 				var tmp = _submit.bind(null, form);
@@ -1059,10 +1063,14 @@
 			var targetNavBar = navBarName ? navBarName : navBarNameFromState($state);
 
 			var el = angular.element("no-nav-bar");
-			el.find("[no-navbar]")
-				.addClass("ng-hide");
-			el.find("[no-navbar='" + targetNavBar + "']")
-				.removeClass("ng-hide");
+
+			if(!!targetNavBar){
+				el.find("[no-navbar]")
+					.addClass("ng-hide");
+				el.find("[no-navbar='" + targetNavBar + "']")
+					.removeClass("ng-hide");
+			}
+
 
 			//Make form readonly when required.
 			switch (targetNavBar) {
@@ -1534,11 +1542,13 @@
 			 * `showNavBar` hides all the navbars within the template and then
 			 * shows the nav bar that matches the targetNavBar.
 			 */
-			var el = angular.element("no-nav-bar");
-			el.find("[no-navbar]")
-				.addClass("ng-hide");
-			el.find("[no-navbar='" + targetNavBar + "']")
-				.removeClass("ng-hide");
+			 if(!!targetNavBar){
+				 var el = angular.element("no-nav-bar");
+	 			el.find("[no-navbar]")
+	 				.addClass("ng-hide");
+	 			el.find("[no-navbar='" + targetNavBar + "']")
+	 				.removeClass("ng-hide");
+			 }
 
 			/*
 			 * `showNavBar` puts on a protective cover over the form when the
