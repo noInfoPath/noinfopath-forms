@@ -245,10 +245,14 @@
 			var targetNavBar = navBarName ? navBarName : navBarNameFromState($state);
 
 			var el = angular.element("no-nav-bar");
-			el.find("[no-navbar]")
-				.addClass("ng-hide");
-			el.find("[no-navbar='" + targetNavBar + "']")
-				.removeClass("ng-hide");
+
+			if(!!targetNavBar){
+				el.find("[no-navbar]")
+					.addClass("ng-hide");
+				el.find("[no-navbar='" + targetNavBar + "']")
+					.removeClass("ng-hide");
+			}
+
 
 			//Make form readonly when required.
 			switch (targetNavBar) {
@@ -720,11 +724,13 @@
 			 * `showNavBar` hides all the navbars within the template and then
 			 * shows the nav bar that matches the targetNavBar.
 			 */
-			var el = angular.element("no-nav-bar");
-			el.find("[no-navbar]")
-				.addClass("ng-hide");
-			el.find("[no-navbar='" + targetNavBar + "']")
-				.removeClass("ng-hide");
+			 if(!!targetNavBar){
+				 var el = angular.element("no-nav-bar");
+	 			el.find("[no-navbar]")
+	 				.addClass("ng-hide");
+	 			el.find("[no-navbar='" + targetNavBar + "']")
+	 				.removeClass("ng-hide");
+			 }
 
 			/*
 			 * `showNavBar` puts on a protective cover over the form when the
