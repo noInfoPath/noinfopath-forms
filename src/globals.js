@@ -1,11 +1,11 @@
 /**
  * # noinfopath.forms
- * @version 1.2.7
+ * @version 2.0.1
  *
- * Combines the functionality of validation from bootstrap and angular.
+ * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
  */
-(function(angular, undefined) {
+(function (angular, undefined) {
 	"use strict";
 
 	angular.module("noinfopath.forms", ["noinfopath"])
