@@ -1,7 +1,7 @@
 # noinfopath.forms
-@version 1.2.7
+@version 2.0.0
 
-Combines the functionality of validation from bootstrap and angular.
+Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
 
 
 ## noForm : Directive
@@ -175,47 +175,6 @@ local storage.
 
 `NoFormConfigSync` exposes noNavBarConfig as the property noNavBarRoutes
 
-@method whenReady() @deprecated
-
-`whenReady` returns the navBarConfig object after ensuring that the formConfig
-and the navBarConfig has been loaded.
-
-@param
-
-None
-
-@returns object
-
-`whenReady` sets a flag based on noConfig's configuration to load/save
-navBar configuration in local storage.
-
-@method getFormByShortName(shortName)
-
-`getFormByShortName` gets a form configuration based on the name of the route
-passed in.
-
-@param
-
-|Name|Type|Description|
-|----|----|-----------|
-|shortName|string|Name of a route|
-
-@returns object
-
-@method getFormByRoute(routeName, entityName)
-
-`getFormByRoute` gets the route based on the routeName passed into
-the function. Returns a form configuration object.
-
-@param
-
-|Name|Type|Description|
-|----|----|-----------|
-|routeName|string|The name of the route|
-|entityName|string|(Optional) the entity name|
-
-@returns object
-
 @method getRoute(routeKey, routeData)
 
 `getRoute` returns the form configuration based on the routeKey and routeData
@@ -268,6 +227,47 @@ state and returns it.
 |state|object|A ui-router state object|
 
 @returns string
+
+@method getFormByShortName(shortName) @deprecated
+
+`getFormByShortName` gets a form configuration based on the name of the route
+passed in.
+
+@param
+
+|Name|Type|Description|
+|----|----|-----------|
+|shortName|string|Name of a route|
+
+@returns object
+
+@method getFormByRoute(routeName, entityName)
+
+`getFormByRoute` gets the route based on the routeName passed into
+the function. Returns a form configuration object.
+
+@param
+
+|Name|Type|Description|
+|----|----|-----------|
+|routeName|string|The name of the route|
+|entityName|string|(Optional) the entity name|
+
+@returns object
+
+@method whenReady()
+
+`whenReady` returns the navBarConfig object after ensuring that the formConfig
+and the navBarConfig has been loaded.
+
+@param
+
+None
+
+@returns object
+
+`whenReady` sets a flag based on noConfig's configuration to load/save
+navBar configuration in local storage.
 
 @method navBarKeyFromState(stateName)
 

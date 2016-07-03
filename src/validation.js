@@ -33,7 +33,7 @@
 
 
 	function _blur(el, field) {
-		if (!field.$pristine) _validate(el, field);
+		if(field && !field.$pristine) _validate(el, field);
 	}
 
 	/*
