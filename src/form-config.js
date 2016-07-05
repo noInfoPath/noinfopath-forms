@@ -410,7 +410,7 @@
 
  		function getComponentContextByRoute(routeName, entityName, componentType, componentKey) {
 
- 			var config = getFormByRoute($state.current.name, $state.params.entity),
+ 			var config = getFormByRoute($state.current.name, $state.params.entity) || {},
  				route = noInfoPath.getItem(config, "route"),
  				form = noInfoPath.getItem(config, "noForm"),
  				component = noInfoPath.getItem(config, componentKey),

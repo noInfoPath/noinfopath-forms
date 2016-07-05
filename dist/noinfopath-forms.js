@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.1
+ * @version 2.0.2
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -618,7 +618,7 @@
 		}
 
 		function _compile(el, attrs) {
-			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noTabs", attrs.noForm);
+			var ctx = attrs.noForm ? noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noTabs", attrs.noForm) : {};
 
 			el.attr("noid", noInfoPath.createNoid);
 
@@ -1634,7 +1634,7 @@
 
  		function getComponentContextByRoute(routeName, entityName, componentType, componentKey) {
 
- 			var config = getFormByRoute($state.current.name, $state.params.entity),
+ 			var config = getFormByRoute($state.current.name, $state.params.entity) || {},
  				route = noInfoPath.getItem(config, "route"),
  				form = noInfoPath.getItem(config, "noForm"),
  				component = noInfoPath.getItem(config, componentKey),

@@ -152,7 +152,7 @@
 		}
 
 		function _compile(el, attrs) {
-			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noTabs", attrs.noForm);
+			var ctx = attrs.noForm ? noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noTabs", attrs.noForm) : {};
 
 			el.attr("noid", noInfoPath.createNoid);
 
