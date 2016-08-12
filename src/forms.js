@@ -305,8 +305,15 @@
 		}
 
 		function _compile(el, attrs) {
-			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noForm", attrs.noForm);
-			el.attr("noid", noInfoPath.createNoid());
+			var ctx;
+
+			if(attrs.noid) {
+				// IT WAS RENDERED BY NODOM
+				ctx = noFormConfig.getComponentContextByNoid($state.params.fid || $state.current.name.split(".").pop(), "test", attrs.noid);
+			} else {
+				ctx = noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noForm", attrs.noForm);
+			}
+			// el.attr("noid", noInfoPath.createNoid());
 			return _link.bind(ctx, ctx);
 		}
 
