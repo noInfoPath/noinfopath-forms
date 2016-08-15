@@ -632,7 +632,7 @@
 
 			var noForm = ctx.form,
 				noTab = ctx.widget,
-				dynamic = ctx.noElement && ctx.noElement.tabstrip === "DYNAMIC";
+				dynamic = ctx.noElement && !ctx.noElement.tabstrip;
 
 			if(noTab || dynamic) {
 				_dynamic(ctx, scope, el, attrs);
