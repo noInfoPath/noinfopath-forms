@@ -3,9 +3,11 @@
 	"use strict";
 
 	/* Replacement for NoForm / NoSubmit */
-	function NoFormService($rootScope, $compile, $stateParams, noNCLManager, noTransactionCache, noLoginService) {
+	function NoFormService($rootScope, $compile, $stateParams, noNCLManager, noTransactionCache, noLoginService, $q) {
 		this.save = function(ctx, scope, el, attrs) {
-			var form = el.closest("no-form[ng-form]");
+			var deferred = $q.defer(),
+				form = el.closest("no-form[ng-form]");
+
 			if(scope.$validator.$valid) {
 				var data = {},
 					models = form.find("[ng-model]").toArray(),
@@ -30,23 +32,28 @@
 					.then(function (resp) {
 						noTransactionCache.endTransaction(noTrans);
 						scope.noGrowler.growl("success");
+						resp.pauseFor = 1500;
+						deferred.resolve(resp);
 					})
 					.catch(function (err) {
 						console.error(err);
+						deferred.reject(err);
 					});
 
 
 				console.log(data);
 			} else {
 				scope.noGrowler.growl("error", undefined, "Form invalid!");
-				return { pauseFor: 1000 };
+				deferred.resolve({ stopActionQueue: true });
 			}
+
+			return deferred.promise;
 		};
 	}
 
 	angular.module("noinfopath.forms")
 
-		.service("noFormService", ["$rootScope", "$compile", "$stateParams", "noNCLManager", "noTransactionCache", "noLoginService", NoFormService])
+		.service("noFormService", ["$rootScope", "$compile", "$stateParams", "noNCLManager", "noTransactionCache", "noLoginService", "$q", NoFormService])
 
 	;
 
