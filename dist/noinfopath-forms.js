@@ -20,11 +20,22 @@
 	function NoGrowler($timeout) {
 		this.success = false;
 		this.error = false;
+		this.msg = {
+			success: "Awe yeah, record saved!",
+			error: "Boooo"
+		};
 		this.reset = function () {
 			this.success = false;
 			this.error = false;
+			this.msg = {
+				success: "Awe yeah, record saved!",
+				error: "Boooo"
+			};
 		}.bind(this);
-		this.growl = function (messageType, timeoutVal) {
+		this.growl = function (messageType, timeoutVal, msg) {
+			if(msg) {
+				this.msg[messageType] = msg;
+			}
 			this[messageType] = true;
 			$timeout(this.reset, timeoutVal || 5000);
 		}.bind(this);
