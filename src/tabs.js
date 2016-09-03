@@ -34,18 +34,27 @@
 			//Next activate the tab that was clicked.
 			tab = angular.element(e.target).closest("li");
 			ndx = tab.attr("ndx");
-			if(ctx.noElement) {
-				ctx.noElement.activeTab = Number(ndx);
-			}
+
 			pnl = el.find("no-tab-panel[ndx='" + ndx + "']").first();
 
 			tab.addClass("active");
 			pnl.removeClass("ng-hide");
 
-			noInfoPath.setItem(scope, tabKey, {
-				ndx: ndx,
-				btnBar: tab.children("a").attr("btnbar")
-			});
+			if(ctx.noElement) {
+				ctx.noElement.activeTab = Number(ndx);
+				scope.$evalAsync(function() {
+					scope[tabKey] = ndx;
+				});
+				//selectTab(ndx, ctx);
+				// scope[tabKey] = ndx;
+			} else {
+				noInfoPath.setItem(scope, tabKey, {
+					ndx: ndx,
+					btnBar: tab.children("a").attr("btnbar")
+				});
+			}
+
+
 			//$scope.$broadcast("noGrid::refresh", $scope.docGrid ? $scope.docGrid._id : "");
 
 			if(execQueue) noActionQueue.synchronize(execQueue);
@@ -165,11 +174,11 @@
 				_dynamic(ctx, scope, el, attrs);
 			} else {
 				_static(ctx, scope, el, attrs);
-				var tab = el.find("ul").find("li.active"),
-				pnl = el.find("no-tab-panels").first(),
-				ndx2 = tab.attr("ndx"),
-				noid = el.attr("noid"),
-				key = "noTabs_" + noid;
+				var tab = el.find("ul").find("li.active");
+				// pnl = el.find("no-tab-panels").first(),
+				// ndx2 = tab.attr("ndx"),
+				// noid = el.attr("noid"),
+				// key = "noTabs_" + noid;
 
 
 				tab.children("a").click();
