@@ -80,7 +80,7 @@
  		 *
  		 * @returns promise
  		 */
- 		function getFormConfig() {
+ 		function getFormConfig(url) {
  			var promise;
 
  			/**
@@ -93,7 +93,7 @@
  				promise = $q(function (resolve, reject) {
  					$rootScope.noFormConfig = {};
 
- 					$http.get("/no-forms.json")
+ 					$http.get(url || "no-forms.json")
  						.then(function (resp) {
  							var forms = resp.data;
 
@@ -191,7 +191,8 @@
  		 *
  		 * @returns promise
  		 */
- 		function getNavBarConfig() {
+ 		function getNavBarConfig(loadNavigation) {
+			if(!loadNavigation) return $q.when({});
 
  			/**
  			 * `getNavBarConfig` checks if the cacheNavBar flag is true, it
@@ -438,6 +439,29 @@
  			};
  		}
 
+		function getComponentContextByNoid(screenName, dbName, noid) {
+			var config = $rootScope.nacl.noScreens[screenName],
+				route = { data: {} },
+				noFormCfg = config.get(noid),
+				form = noFormCfg.noComponent.noForm,
+				component = noFormCfg.componentKey,
+				datasources = $rootScope.nacl.noDataSources, // change to option
+				dsCfg = form.noDataSource;
+
+
+			return {
+ 				config: config,
+ 				route: route,
+ 				form: form,
+ 				component: component,
+ 				widget: undefined,
+ 				primary: undefined,
+ 				datasources: datasources,
+ 				datasource: datasources[dbName || "test"],
+ 				resolveDataSource: _resolveDataSource.bind(null, datasources)
+ 			};
+		}
+
  		/**
  		 * @method whenReady()
  		 *
@@ -450,15 +474,15 @@
  		 *
  		 * @returns object
  		 */
- 		function whenReady() {
+ 		function whenReady(url, loadNavigation) {
  			/*
  			 * `whenReady` sets a flag based on noConfig's configuration to load/save
  			 * navBar configuration in local storage.
  			 */
  			cacheNavBar = noConfig.current ? noConfig.current.noCacheNoNavBar : false;
 
- 			return getFormConfig()
- 				.then(getNavBarConfig)
+ 			return getFormConfig(url)
+ 				.then(getNavBarConfig.bind(null, loadNavigation))
  				.catch(function (err) {
  					console.log(err);
  				});
@@ -471,6 +495,8 @@
  		this.getFormByRoute = getFormByRoute;
 
  		this.getComponentContextByRoute = getComponentContextByRoute;
+
+		this.getComponentContextByNoid = getComponentContextByNoid;
 
  		/**
  		 * @method navBarKeyFromState(stateName)

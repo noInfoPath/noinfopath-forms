@@ -1,6 +1,6 @@
 //tabs.js
 (function (angular) {
-	function NoTabsDirective($compile, $state, noFormConfig, noDataSource, noActionQueue, noDataManager) {
+	function NoTabsDirective($compile, $state, noFormConfig, noDataSource, noActionQueue, noDataManager, noNCLManager) {
 		function _resolveOrientation(noTab) {
 			var ul = "nav nav-tabs";
 
@@ -26,6 +26,7 @@
 				tabKey = ctx.component && ctx.component.scopeKey ? ctx.component.scopeKey : "noTabs_" + noid,
 				execQueue = ctx.component && ctx.component.actions ? noActionQueue.createQueue(ctx, scope, el, ctx.component.actions) : undefined;
 
+
 			//First deactivate the active tab.
 			tab.removeClass("active");
 			pnl.addClass("ng-hide");
@@ -33,15 +34,27 @@
 			//Next activate the tab that was clicked.
 			tab = angular.element(e.target).closest("li");
 			ndx = tab.attr("ndx");
+
 			pnl = el.find("no-tab-panel[ndx='" + ndx + "']").first();
 
 			tab.addClass("active");
 			pnl.removeClass("ng-hide");
 
-			noInfoPath.setItem(scope, tabKey, {
-				ndx: ndx,
-				btnBar: tab.children("a").attr("btnbar")
-			});
+			if(ctx.noElement) {
+				ctx.noElement.activeTab = Number(ndx);
+				scope.$evalAsync(function() {
+					scope[tabKey] = ndx;
+				});
+				//selectTab(ndx, ctx);
+				// scope[tabKey] = ndx;
+			} else {
+				noInfoPath.setItem(scope, tabKey, {
+					ndx: ndx,
+					btnBar: tab.children("a").attr("btnbar")
+				});
+			}
+
+
 			//$scope.$broadcast("noGrid::refresh", $scope.docGrid ? $scope.docGrid._id : "");
 
 			if(execQueue) noActionQueue.synchronize(execQueue);
@@ -78,13 +91,47 @@
 		}
 
 		function _dynamic(ctx, scope, el, attrs) {
-			var dsCfg = ctx.resolveDataSource(ctx.component.noDataSource),
+			var dsCfg, ds;
+
+			if(ctx.noid) {
+				dsCfg = ctx.noComponent.noDataSource;
 				ds = noDataSource.create(dsCfg, scope);
 
-			noDataManager.cacheRead(dsCfg.name, ds)
+				ds.read()
+					.then(function(data) {
+						var tabCfg = ctx.noComponent.noTabs,
+							ul = el.find("ul").first(),
+							pnls = el.find("no-tab-panels").first();
+
+						if(tabCfg.orientation) ul.addClass(_resolveOrientation());
+
+						for(var i = 0; i < data.length; i++) {
+							var li = angular.element("<li></li>"),
+							a = angular.element("<a href=\"\#\"></a>"),
+							datum = data[i];
+							if(i === 0) {
+								li.addClass("active");
+							}
+							li.attr("ndx", datum[tabCfg.valueField]);
+							a.text(datum[tabCfg.textField]);
+
+							li.append(a);
+
+							ul.append(li);
+						}
+
+						ul.find("li > a").click(_click.bind(ctx, ctx, scope, el));
+					});
+
+			} else {
+				// an attempt for complete backwards compatability
+				dsCfg = ctx.resolveDataSource(ctx.component.noDataSource);
+				ds = noDataSource.create(dsCfg, scope);
+
+				noDataManager.cacheRead(dsCfg.name, ds)
 				.then(function (data) {
 					var ul = el.find("ul").first(),
-						pnls = el.find("no-tab-panels").first();
+					pnls = el.find("no-tab-panels").first();
 
 					ul.addClass(_resolveOrientation(ctx.widget));
 
@@ -98,8 +145,8 @@
 
 					for(var i = 0, ndx = 0; i < data.length; i++) {
 						var li = angular.element("<li></li>"),
-							a = angular.element("<a href=\"\#\"></a>"),
-							datum = data[i];
+						a = angular.element("<a href=\"\#\"></a>"),
+						datum = data[i];
 						if(i === 0) {
 							li.addClass("active");
 						}
@@ -113,22 +160,25 @@
 
 					ul.find("li > a").click(_click.bind(ctx, ctx, scope, el));
 				});
+			}
+
 		}
 
 		function _link(ctx, scope, el, attrs) {
 
 			var noForm = ctx.form,
-				noTab = ctx.widget;
+				noTab = ctx.widget,
+				dynamic = ctx.noElement && !ctx.noElement.tabstrip;
 
-			if(noTab) {
+			if(noTab || dynamic) {
 				_dynamic(ctx, scope, el, attrs);
 			} else {
 				_static(ctx, scope, el, attrs);
-				var tab = el.find("ul").find("li.active"),
-					pnl = el.find("no-tab-panels").first(),
-					ndx2 = tab.attr("ndx"),
-					noid = el.attr("noid"),
-					key = "noTabs_" + noid;
+				var tab = el.find("ul").find("li.active");
+				// pnl = el.find("no-tab-panels").first(),
+				// ndx2 = tab.attr("ndx"),
+				// noid = el.attr("noid"),
+				// key = "noTabs_" + noid;
 
 
 				tab.children("a").click();
@@ -153,8 +203,10 @@
 
 		function _compile(el, attrs) {
 			var ctx = attrs.noForm ? noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noTabs", attrs.noForm) : {};
-
-			el.attr("noid", noInfoPath.createNoid);
+			if(attrs.noid) {
+				var hashStore = noNCLManager.getHashStore($state.params.fid || $state.current.name.split(".").pop());
+				ctx = hashStore.get(attrs.noid);
+			}
 
 			return _link.bind(ctx, ctx);
 		}
@@ -166,5 +218,5 @@
 	}
 
 	angular.module("noinfopath.ui")
-		.directive("noTabs", ["$compile", "$state", "noFormConfig", "noDataSource", "noActionQueue", "noDataManager", NoTabsDirective]);
+		.directive("noTabs", ["$compile", "$state", "noFormConfig", "noDataSource", "noActionQueue", "noDataManager", "noNCLManager", NoTabsDirective]);
 })(angular);
