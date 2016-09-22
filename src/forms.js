@@ -353,18 +353,7 @@
 			reject(ctx);
 		}
 
-		function _save(ctx, btnCfg, scope, el, e, data) {
-			console.log("Prepare to save!!!", scope, el, e, data);
-
-			// var noForm = config.noForm,
-			// 	submitButton = elm.attr("no-submit"),
-			// 	comp = noForm.noComponents[submitButton || noForm.primaryComponent],
-			// 	noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
-			// 	data = scope[comp.scopeKey];
-
-			// noTrans.upsert(data)
-			// 	.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm, submitButton))
-			// 	.catch(_saveFailed.bind(null, scope));
+		function _save(ctx, scope, el, data) {
 
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
