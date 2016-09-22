@@ -321,11 +321,15 @@
 				noFormConfig.showNavBar();
 
 				scope.$on("noForm::dirty", function () {
-					noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
+					}
 				});
 
 				scope.$on("noForm::clean", function () {
-					noFormConfig.btnBarChange(scope.currentTabName);
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName);
+					}
 				});
 
 			}
