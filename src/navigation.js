@@ -107,7 +107,10 @@
 			scope.$on("noForm::dirty", function (navBarName, e) {
 				var cnav = _getCurrentNavBar(navBarName, scope, el),
 					barid = cnav.attr("bar-id") + ".dirty";
-				noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+
+				if(!cnav.attr("bar-id").includes(".dirty")){
+					noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+				}
 			}.bind(ctx, ctx.component.scopeKey));
 
 			scope.$on("noForm::clean", function (e) {
