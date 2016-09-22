@@ -153,7 +153,7 @@
 				target: noSubmitTarget
 			});
 
-			scope.$root.$broadcasts("noForm::clean");
+			scope.$root.$broadcast("noForm::clean");
 		}
 
 		function _saveFailed(scope, err) {
