@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.3
+ * @version 2.0.4
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -168,7 +168,7 @@
 				target: noSubmitTarget
 			});
 
-			scope.$root.$broadcasts("noForm::clean");
+			scope.$root.$broadcast("noForm::clean");
 		}
 
 		function _saveFailed(scope, err) {
@@ -368,18 +368,7 @@
 			reject(ctx);
 		}
 
-		function _save(ctx, btnCfg, scope, el, e, data) {
-			console.log("Prepare to save!!!", scope, el, e, data);
-
-			// var noForm = config.noForm,
-			// 	submitButton = elm.attr("no-submit"),
-			// 	comp = noForm.noComponents[submitButton || noForm.primaryComponent],
-			// 	noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
-			// 	data = scope[comp.scopeKey];
-
-			// noTrans.upsert(data)
-			// 	.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm, submitButton))
-			// 	.catch(_saveFailed.bind(null, scope));
+		function _save(ctx, scope, el, data) {
 
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
@@ -875,7 +864,10 @@
 			scope.$on("noForm::dirty", function (navBarName, e) {
 				var cnav = _getCurrentNavBar(navBarName, scope, el),
 					barid = cnav.attr("bar-id") + ".dirty";
-				noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+
+				if(!cnav.attr("bar-id").includes(".dirty")){
+					noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+				}
 			}.bind(ctx, ctx.component.scopeKey));
 
 			scope.$on("noForm::clean", function (e) {
@@ -1086,11 +1078,15 @@
 				noFormConfig.showNavBar();
 
 				scope.$on("noForm::dirty", function () {
-					noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
+					}
 				});
 
 				scope.$on("noForm::clean", function () {
-					noFormConfig.btnBarChange(scope.currentTabName);
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName);
+					}
 				});
 
 			}
@@ -1253,6 +1249,18 @@
 	 * ## noSubmit
 	 *
 	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+	 *
+	 *	### Events
+	 *
+	 *	The noSubmit directive will broadcast events on the root scope to notify
+	 *	the implementor that the data submitted is valid.
+	 *
+	 *	#### noSubmit::dataReady
+	 *
+	 *	Raise when the data submmited has passed all validations. Along with the
+	 *	standard event object, the broadcast also sends a reference to the element
+	 *	that has the noSubmit directive attached to it, the scope, and a timestamp.
+	 *
 	 */
 	.directive("noSubmit", ["$injector", "$rootScope", function($injector, $rootScope) {
 		return {
