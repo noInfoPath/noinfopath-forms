@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.4
+ * @version 2.0.5
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -556,7 +556,8 @@
 				tab = ul.find("li.active"),
 				ndx = tab.attr("ndx"),
 				noid = el.attr("noid"),
-				pnl = el.find("no-tab-panel[ndx='" + ndx + "']").first(),
+				pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']"),
+				//el.find("no-tab-panel[ndx='" + ndx + "']").first(),
 				tabKey = ctx.component && ctx.component.scopeKey ? ctx.component.scopeKey : "noTabs_" + noid,
 				execQueue = ctx.component && ctx.component.actions ? noActionQueue.createQueue(ctx, scope, el, ctx.component.actions) : undefined;
 
@@ -569,7 +570,7 @@
 			tab = angular.element(e.target).closest("li");
 			ndx = tab.attr("ndx");
 
-			pnl = el.find("no-tab-panel[ndx='" + ndx + "']").first();
+			pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']");
 
 			tab.addClass("active");
 			pnl.removeClass("ng-hide");
