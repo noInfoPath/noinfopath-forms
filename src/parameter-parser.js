@@ -9,7 +9,7 @@
 					}),
 					values = {};
 				keys.forEach(function (k) {
-					values[k] = data[k].$modelValue || data[k];
+					values[k] = (data[k] && data[k].$modelValue) || data[k];
 				});
 				return values;
 			};
@@ -19,7 +19,7 @@
 				});
 				keys.forEach(function (k) {
 					var d = dest[k];
-					if(d) {
+					if(d && d.$setViewValue) {
 						d.$setViewValue(src[k]);
 						d.$render();
 					} else {
