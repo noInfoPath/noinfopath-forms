@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.6
+ * @version 2.0.7
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -353,7 +353,7 @@
 		};
 	}
 
-	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache) {
+	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser) {
 		function _initSession(ctx, scope) {
 			console.log(ctx);
 		}
@@ -380,7 +380,7 @@
 						trans: noTrans
 					};
 
-				noTrans.upsert(data)
+				noTrans.upsert(noParameterParser.parse(data))
 					.then(_sucessful.bind(null, ctx, resolve, newctx))
 					.catch(_fault.bind(null, ctx, reject, newctx));
 			});
@@ -467,7 +467,7 @@
 
 	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", NoDataManagerService]);
+	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
 
 })(angular);
 
@@ -1974,7 +1974,7 @@
 
 (function(angular, undefined){
 	"use strict";
-	
+
 	angular.module("noinfopath.forms")
 		.service("noParameterParser", [function () {
 			this.parse = function (data) {
@@ -1983,7 +1983,7 @@
 					}),
 					values = {};
 				keys.forEach(function (k) {
-					values[k] = data[k].$modelValue || data[k];
+					values[k] = (data[k] && data[k].$modelValue) || data[k];
 				});
 				return values;
 			};
@@ -1993,7 +1993,7 @@
 				});
 				keys.forEach(function (k) {
 					var d = dest[k];
-					if(d) {
+					if(d && d.$setViewValue) {
 						d.$setViewValue(src[k]);
 						d.$render();
 					} else {
