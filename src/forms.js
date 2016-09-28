@@ -153,7 +153,7 @@
 				target: noSubmitTarget
 			});
 
-			scope.$root.$broadcasts("noForm::clean");
+			scope.$root.$broadcast("noForm::clean");
 		}
 
 		function _saveFailed(scope, err) {
@@ -338,7 +338,7 @@
 		};
 	}
 
-	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache) {
+	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser) {
 		function _initSession(ctx, scope) {
 			console.log(ctx);
 		}
@@ -353,18 +353,7 @@
 			reject(ctx);
 		}
 
-		function _save(ctx, btnCfg, scope, el, e, data) {
-			console.log("Prepare to save!!!", scope, el, e, data);
-
-			// var noForm = config.noForm,
-			// 	submitButton = elm.attr("no-submit"),
-			// 	comp = noForm.noComponents[submitButton || noForm.primaryComponent],
-			// 	noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
-			// 	data = scope[comp.scopeKey];
-
-			// noTrans.upsert(data)
-			// 	.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm, submitButton))
-			// 	.catch(_saveFailed.bind(null, scope));
+		function _save(ctx, scope, el, data) {
 
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
@@ -376,7 +365,7 @@
 						trans: noTrans
 					};
 
-				noTrans.upsert(data)
+				noTrans.upsert(noParameterParser.parse(data))
 					.then(_sucessful.bind(null, ctx, resolve, newctx))
 					.catch(_fault.bind(null, ctx, reject, newctx));
 			});
@@ -463,6 +452,6 @@
 
 	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", NoDataManagerService]);
+	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
 
 })(angular);

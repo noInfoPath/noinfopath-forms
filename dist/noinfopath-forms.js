@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.3
+ * @version 2.0.7
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -168,7 +168,7 @@
 				target: noSubmitTarget
 			});
 
-			scope.$root.$broadcasts("noForm::clean");
+			scope.$root.$broadcast("noForm::clean");
 		}
 
 		function _saveFailed(scope, err) {
@@ -353,7 +353,7 @@
 		};
 	}
 
-	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache) {
+	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser) {
 		function _initSession(ctx, scope) {
 			console.log(ctx);
 		}
@@ -368,18 +368,7 @@
 			reject(ctx);
 		}
 
-		function _save(ctx, btnCfg, scope, el, e, data) {
-			console.log("Prepare to save!!!", scope, el, e, data);
-
-			// var noForm = config.noForm,
-			// 	submitButton = elm.attr("no-submit"),
-			// 	comp = noForm.noComponents[submitButton || noForm.primaryComponent],
-			// 	noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
-			// 	data = scope[comp.scopeKey];
-
-			// noTrans.upsert(data)
-			// 	.then(_saveSuccessful.bind(null, noTrans, scope, _, config, comp, elm, submitButton))
-			// 	.catch(_saveFailed.bind(null, scope));
+		function _save(ctx, scope, el, data) {
 
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
@@ -391,7 +380,7 @@
 						trans: noTrans
 					};
 
-				noTrans.upsert(data)
+				noTrans.upsert(noParameterParser.parse(data))
 					.then(_sucessful.bind(null, ctx, resolve, newctx))
 					.catch(_fault.bind(null, ctx, reject, newctx));
 			});
@@ -478,7 +467,7 @@
 
 	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", NoDataManagerService]);
+	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
 
 })(angular);
 
@@ -567,7 +556,8 @@
 				tab = ul.find("li.active"),
 				ndx = tab.attr("ndx"),
 				noid = el.attr("noid"),
-				pnl = el.find("no-tab-panel[ndx='" + ndx + "']").first(),
+				pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']"),
+				//el.find("no-tab-panel[ndx='" + ndx + "']").first(),
 				tabKey = ctx.component && ctx.component.scopeKey ? ctx.component.scopeKey : "noTabs_" + noid,
 				execQueue = ctx.component && ctx.component.actions ? noActionQueue.createQueue(ctx, scope, el, ctx.component.actions) : undefined;
 
@@ -580,7 +570,7 @@
 			tab = angular.element(e.target).closest("li");
 			ndx = tab.attr("ndx");
 
-			pnl = el.find("no-tab-panel[ndx='" + ndx + "']").first();
+			pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']");
 
 			tab.addClass("active");
 			pnl.removeClass("ng-hide");
@@ -875,7 +865,10 @@
 			scope.$on("noForm::dirty", function (navBarName, e) {
 				var cnav = _getCurrentNavBar(navBarName, scope, el),
 					barid = cnav.attr("bar-id") + ".dirty";
-				noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+
+				if(!cnav.attr("bar-id").includes(".dirty")){
+					noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+				}
 			}.bind(ctx, ctx.component.scopeKey));
 
 			scope.$on("noForm::clean", function (e) {
@@ -1086,11 +1079,15 @@
 				noFormConfig.showNavBar();
 
 				scope.$on("noForm::dirty", function () {
-					noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
+					}
 				});
 
 				scope.$on("noForm::clean", function () {
-					noFormConfig.btnBarChange(scope.currentTabName);
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName);
+					}
 				});
 
 			}
@@ -1982,4 +1979,36 @@
 	angular.module("noinfopath.forms")
 		.service("noFormConfig", ["$q", "$http", "$rootScope", "$state", "noDataSource", "noLocalStorage", "noConfig", NoFormConfigSync]);
 
+})(angular);
+
+(function(angular, undefined){
+	"use strict";
+
+	angular.module("noinfopath.forms")
+		.service("noParameterParser", [function () {
+			this.parse = function (data) {
+				var keys = Object.keys(data).filter(function (v, k) {
+						if(v.indexOf("$") === -1) return v;
+					}),
+					values = {};
+				keys.forEach(function (k) {
+					values[k] = (data[k] && data[k].$modelValue) || data[k];
+				});
+				return values;
+			};
+			this.update = function (src, dest) {
+				var keys = Object.keys(src).filter(function (v, k) {
+					if(v.indexOf("$") === -1) return v;
+				});
+				keys.forEach(function (k) {
+					var d = dest[k];
+					if(d && d.$setViewValue) {
+						d.$setViewValue(src[k]);
+						d.$render();
+					} else {
+						dest[k] = src[k];
+					}
+				});
+			};
+		}]);
 })(angular);
