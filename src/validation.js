@@ -224,5 +224,14 @@
 		return directive;
 	}])
 
+	.directive("noValidation", [function(){
+		return {
+			restrict: "A",
+			require: "form",
+			link: function(scope, el, attrs, form){
+				console.log(form);
+			}
+		};
+	}])
 	;
 })(angular);
