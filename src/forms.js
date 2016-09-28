@@ -343,8 +343,13 @@
 			console.log(ctx);
 		}
 
-		function _sucessful(ctx, resolve, data) {
+		function _successful(ctx, resolve, data) {
+			var navState = data.scope.noNavigation[data.ctx.component.scopeKey].validationState;
+			navState.form.$setUntouched();
+			navState.form.$setPristine();
+			navState.form.$setSubmitted();
 			ctx.data = data;
+
 			resolve(ctx);
 		}
 
@@ -362,11 +367,12 @@
 					newctx = {
 						ctx: ctx,
 						comp: comp,
-						trans: noTrans
+						trans: noTrans,
+						scope: scope
 					};
 
 				noTrans.upsert(noParameterParser.parse(data))
-					.then(_sucessful.bind(null, ctx, resolve, newctx))
+					.then(_successful.bind(null, ctx, resolve, newctx))
 					.catch(_fault.bind(null, ctx, reject, newctx));
 			});
 		}
@@ -408,6 +414,7 @@
 		this.save = _save;
 		this.undo = _undo;
 		this.initSession = _initSession;
+		this.beginTransaction = _initSession;
 		this.cacheRead = _cacheRead;
 
 	}
@@ -448,10 +455,10 @@
 	angular.module("noinfopath.forms")
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', NoFormDirective])
 
-	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
 
-	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
+		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
+		.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
 
 })(angular);
