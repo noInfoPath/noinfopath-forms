@@ -423,6 +423,7 @@
 		this.save = _save;
 		this.undo = _undo;
 		this.initSession = _initSession;
+		this.beginTransaction = _initSession;
 		this.cacheRead = _cacheRead;
 
 	}
@@ -463,11 +464,11 @@
 	angular.module("noinfopath.forms")
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', NoFormDirective])
 
-	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
 
-	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
+		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
+		.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
 
 })(angular);
 
@@ -760,7 +761,7 @@
 (function (angular, undefined) {
 	"use strict";
 
-	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager) {
+	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub) {
 		var templateFactories = {
 			"button": function (ctx, cfg, scope, el) {
 
@@ -862,20 +863,38 @@
 			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
 			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
 
-			scope.$on("noForm::dirty", function (navBarName, e) {
+			PubSub.subscribe("no-validation::dirty-state-changed", function(navBarName, state) {
 				var cnav = _getCurrentNavBar(navBarName, scope, el),
-					barid = cnav.attr("bar-id") + ".dirty";
+					barid = cnav.attr("bar-id"),
+					baridDirty = (barid || "") + ".dirty"
+					;
 
-				if(!cnav.attr("bar-id").includes(".dirty")){
+				console.log("no-validation::dirty-state-changed", arguments, barid, baridDirty);
+				noNavigationManager.updateValidationState(scope,navBarName, state);
+
+				if(cnav && !cnav.attr("bar-id").includes(".dirty")){
 					noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
 				}
 			}.bind(ctx, ctx.component.scopeKey));
 
-			scope.$on("noForm::clean", function (e) {
-				var cnav = _getCurrentNavBar(navBarName, scope, el),
-					barid = cnav.attr("bar-id").replace(/\.dirty/, "");
-				noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-			}.bind(ctx, ctx.component.scopeKey));
+			scope.$on("$destroy", function(){
+				PubSub.unsubscribe("no-validation::dirty-state-changed");
+			});
+
+			// scope.$on("noForm::dirty", function (navBarName, e) {
+			// 	var cnav = _getCurrentNavBar(navBarName, scope, el),
+			// 		barid = cnav.attr("bar-id") + ".dirty";
+			//
+			// 	if(!cnav.attr("bar-id").includes(".dirty")){
+			// 		noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// 	}
+			// }.bind(ctx, ctx.component.scopeKey));
+			//
+			// scope.$on("noForm::clean", function (e) {
+			// 	var cnav = _getCurrentNavBar(navBarName, scope, el),
+			// 		barid = cnav.attr("bar-id").replace(/\.dirty/, "");
+			// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// }.bind(ctx, ctx.component.scopeKey));
 
 		}
 
@@ -918,8 +937,12 @@
 		};
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
-			console.log("changeNavBar", arguments);
+			//console.log("changeNavBar", arguments);
 			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".currentNavBar", barid);
+		};
+
+		this.updateValidationState = function(scope, navBarName, state) {
+			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".validationState", state);
 		};
 
 
@@ -1128,7 +1151,7 @@
 			};
 		}])
 
-		.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", NoNavigationDirective])
+		.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", NoNavigationDirective])
 
 		.service("noNavigationManager", ["$q", "$http", "$state", NoNavigationManagerService]);
 })(angular);
@@ -1359,12 +1382,19 @@
 		return directive;
 	}])
 
-	.directive("noValidation", [function(){
+	.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser){
 		return {
 			restrict: "A",
 			require: "form",
 			link: function(scope, el, attrs, form){
-				console.log(form);
+				//watch for validation flags and broadcast events down this
+				//directives hierarchy.
+				var wk = form.$name + ".$dirty";
+				console.log(wk, Object.is(form, scope[wk]));
+				scope.$watch(wk, function() {
+					//console.log(wk, arguments);
+					pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form)});
+				});
 			}
 		};
 	}])

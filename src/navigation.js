@@ -2,7 +2,7 @@
 (function (angular, undefined) {
 	"use strict";
 
-	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager) {
+	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub) {
 		var templateFactories = {
 			"button": function (ctx, cfg, scope, el) {
 
@@ -104,20 +104,38 @@
 			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
 			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
 
-			scope.$on("noForm::dirty", function (navBarName, e) {
+			PubSub.subscribe("no-validation::dirty-state-changed", function(navBarName, state) {
 				var cnav = _getCurrentNavBar(navBarName, scope, el),
-					barid = cnav.attr("bar-id") + ".dirty";
+					barid = cnav.attr("bar-id"),
+					baridDirty = (barid || "") + ".dirty"
+					;
 
-				if(!cnav.attr("bar-id").includes(".dirty")){
+				console.log("no-validation::dirty-state-changed", arguments, barid, baridDirty);
+				noNavigationManager.updateValidationState(scope,navBarName, state);
+
+				if(cnav && !cnav.attr("bar-id").includes(".dirty")){
 					noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
 				}
 			}.bind(ctx, ctx.component.scopeKey));
 
-			scope.$on("noForm::clean", function (e) {
-				var cnav = _getCurrentNavBar(navBarName, scope, el),
-					barid = cnav.attr("bar-id").replace(/\.dirty/, "");
-				noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-			}.bind(ctx, ctx.component.scopeKey));
+			scope.$on("$destroy", function(){
+				PubSub.unsubscribe("no-validation::dirty-state-changed");
+			});
+
+			// scope.$on("noForm::dirty", function (navBarName, e) {
+			// 	var cnav = _getCurrentNavBar(navBarName, scope, el),
+			// 		barid = cnav.attr("bar-id") + ".dirty";
+			//
+			// 	if(!cnav.attr("bar-id").includes(".dirty")){
+			// 		noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// 	}
+			// }.bind(ctx, ctx.component.scopeKey));
+			//
+			// scope.$on("noForm::clean", function (e) {
+			// 	var cnav = _getCurrentNavBar(navBarName, scope, el),
+			// 		barid = cnav.attr("bar-id").replace(/\.dirty/, "");
+			// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// }.bind(ctx, ctx.component.scopeKey));
 
 		}
 
@@ -160,8 +178,12 @@
 		};
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
-			console.log("changeNavBar", arguments);
+			//console.log("changeNavBar", arguments);
 			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".currentNavBar", barid);
+		};
+
+		this.updateValidationState = function(scope, navBarName, state) {
+			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".validationState", state);
 		};
 
 
@@ -370,7 +392,7 @@
 			};
 		}])
 
-		.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", NoNavigationDirective])
+		.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", NoNavigationDirective])
 
 		.service("noNavigationManager", ["$q", "$http", "$state", NoNavigationManagerService]);
 })(angular);
