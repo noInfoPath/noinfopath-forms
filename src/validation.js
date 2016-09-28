@@ -235,7 +235,7 @@
 				console.log(wk, Object.is(form, scope[wk]));
 				scope.$watch(wk, function() {
 					//console.log(wk, arguments);
-					pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form)});
+					pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});
 				});
 			}
 		};
