@@ -1,6 +1,6 @@
 //tabs.js
 (function (angular) {
-	function NoTabsDirective($compile, $state, noFormConfig, noDataSource, noActionQueue, noDataManager, noNCLManager) {
+	function NoTabsDirective($compile, $state, noFormConfig, noDataSource, noActionQueue, noDataManager, noNCLManager, PubSub) {
 		function _resolveOrientation(noTab) {
 			var ul = "nav nav-tabs";
 
@@ -18,6 +18,10 @@
 		function _click(ctx, scope, el, e) {
 			e.preventDefault();
 
+			console.log("noTabs ctx.isDirty", ctx.isDirty);
+
+			if(ctx.isDirty) return;
+			
 			var ul = el.find("ul").first(),
 				tab = ul.find("li.active"),
 				ndx = tab.attr("ndx"),
@@ -169,7 +173,10 @@
 
 			var noForm = ctx.form,
 				noTab = ctx.widget,
-				dynamic = ctx.noElement && !ctx.noElement.tabstrip;
+				dynamic = ctx.noElement && !ctx.noElement.tabstrip,
+				pubID;
+
+			//console.log("noTab", "ctx", ctx);
 
 			if(noTab || dynamic) {
 				_dynamic(ctx, scope, el, attrs);
@@ -187,18 +194,28 @@
 				// scope.$root.$broadcast("noTabs::Change", tab, pnl, noTab);
 			}
 
-			scope.$on("noForm::dirty", function () {
-				var cover = el.find(".no-editor-cover");
-				//console.log("noFormDirty caught.");
-				cover.removeClass("ng-hide");
+			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
+				ctx.isDirty = state.isDirty;
+				console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
 			});
 
-			scope.$on("noForm::clean", function () {
-				var cover = el.find(".no-editor-cover");
-				//console.log("noFormDirty caught.");
-				cover.addClass("ng-hide");
-
+			scope.$on("$destroy", function () {
+				console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
+				PubSub.unsubscribe(pubID);
 			});
+
+			// scope.$on("noForm::dirty", function () {
+			// 	var cover = el.find(".no-editor-cover");
+			// 	//console.log("noFormDirty caught.");
+			// 	cover.removeClass("ng-hide");
+			// });
+			//
+			// scope.$on("noForm::clean", function () {
+			// 	var cover = el.find(".no-editor-cover");
+			// 	//console.log("noFormDirty caught.");
+			// 	cover.addClass("ng-hide");
+			//
+			// });
 
 		}
 
@@ -219,5 +236,5 @@
 	}
 
 	angular.module("noinfopath.ui")
-		.directive("noTabs", ["$compile", "$state", "noFormConfig", "noDataSource", "noActionQueue", "noDataManager", "noNCLManager", NoTabsDirective]);
+		.directive("noTabs", ["$compile", "$state", "noFormConfig", "noDataSource", "noActionQueue", "noDataManager", "noNCLManager", "PubSub", NoTabsDirective]);
 })(angular);
