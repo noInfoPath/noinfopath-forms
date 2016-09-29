@@ -1,3 +1,4 @@
+//parameter-parser.js
 (function(angular, undefined){
 	"use strict";
 
@@ -22,6 +23,8 @@
 					if(d && d.$setViewValue) {
 						d.$setViewValue(src[k]);
 						d.$render();
+						d.$setPristine();
+						d.$setUntouched();
 					} else {
 						dest[k] = src[k];
 					}
