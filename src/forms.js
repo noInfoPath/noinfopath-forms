@@ -373,9 +373,13 @@
 						scope: scope
 					};
 
-				noTrans.upsert(noParameterParser.parse(data))
-					.then(_successful.bind(null, ctx, resolve, newctx))
-					.catch(_fault.bind(null, ctx, reject, newctx));
+				if(data.$valid) {
+					noTrans.upsert(data)
+						.then(_successful.bind(null, ctx, resolve, newctx))
+						.catch(_fault.bind(null, ctx, reject, newctx));
+				} else {
+					reject("Form is invalid.");
+				}
 			});
 		}
 
@@ -457,10 +461,10 @@
 	angular.module("noinfopath.forms")
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', NoFormDirective])
 
-		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
+	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
 
-		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
+	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-		.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
+	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
 
 })(angular);

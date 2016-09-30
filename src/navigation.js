@@ -81,6 +81,10 @@
 				var bar = bars[b],
 					btnBar = angular.element("<navbar></navbar>");
 
+				if(angular.isString(bar)){
+					bar = bars[bar];  //Aliased
+				}
+
 				btnBar.attr("bar-id", b);
 
 				btnBar.addClass(bar.class);

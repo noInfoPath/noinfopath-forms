@@ -388,9 +388,13 @@
 						scope: scope
 					};
 
-				noTrans.upsert(noParameterParser.parse(data))
-					.then(_successful.bind(null, ctx, resolve, newctx))
-					.catch(_fault.bind(null, ctx, reject, newctx));
+				if(data.$valid) {
+					noTrans.upsert(data)
+						.then(_successful.bind(null, ctx, resolve, newctx))
+						.catch(_fault.bind(null, ctx, reject, newctx));
+				} else {
+					reject("Form is invalid.");
+				}
 			});
 		}
 
@@ -472,11 +476,11 @@
 	angular.module("noinfopath.forms")
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', NoFormDirective])
 
-		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
+	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
 
-		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
+	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-		.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
+	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
 
 })(angular);
 
@@ -882,6 +886,10 @@
 			for(var b in bars) {
 				var bar = bars[b],
 					btnBar = angular.element("<navbar></navbar>");
+
+				if(angular.isString(bar)){
+					bar = bars[bar];  //Aliased
+				}
 
 				btnBar.attr("bar-id", b);
 
@@ -2071,12 +2079,23 @@
 		.service("noParameterParser", [function () {
 			this.parse = function (data) {
 				var keys = Object.keys(data).filter(function (v, k) {
-						if(v.indexOf("$") === -1) return v;
+						if(v.indexOf("$") === -1 && v.indexOf(".") === -1) return v;
 					}),
 					values = {};
 				keys.forEach(function (k) {
-					values[k] = (data[k] && data[k].$modelValue) || data[k];
+					var haveSomething = !!data[k],
+						haveModelValue = haveSomething && data[k].hasOwnProperty("$modelValue");
+
+					if(haveModelValue) {
+						values[k] = data[k].$modelValue;
+					} else if(haveSomething) {
+						values[k] =  data[k];
+					} else {
+						values[k] = "";
+					}
+
 				});
+
 				return values;
 			};
 			this.update = function (src, dest) {
@@ -2085,7 +2104,7 @@
 				});
 				keys.forEach(function (k) {
 					var d = dest[k];
-					if(d && d.$setViewValue) {
+					if(d && d.hasOwnProperty("$viewValue")) {
 						d.$setViewValue(src[k]);
 						d.$render();
 						d.$setPristine();
