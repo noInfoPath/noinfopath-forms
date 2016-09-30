@@ -344,12 +344,14 @@
 		}
 
 		function _successful(ctx, resolve, data) {
-			var navState = data.scope.noNavigation[data.ctx.component.scopeKey].validationState;
-			navState.form.$setUntouched();
-			navState.form.$setPristine();
-			navState.form.$setSubmitted();
-			ctx.data = data;
+			if(data.scope.noNavigation) {
+				var navState = data.scope.noNavigation[data.ctx.component.scopeKey].validationState;
+				navState.form.$setUntouched();
+				navState.form.$setPristine();
+				navState.form.$setSubmitted();
+			}
 
+			ctx.data = data;
 			resolve(ctx);
 		}
 
@@ -377,7 +379,7 @@
 			});
 		}
 
-		function _undo(ctx, btnCfg, scope, el, e, dataKey, undoDataKey) {
+		function _undo(ctx, scope, el, dataKey, undoDataKey) {
 			var data = noInfoPath.getItem(scope, dataKey),
 				undoData = noInfoPath.getItem(scope, undoDataKey);
 

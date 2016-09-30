@@ -359,12 +359,14 @@
 		}
 
 		function _successful(ctx, resolve, data) {
-			var navState = data.scope.noNavigation[data.ctx.component.scopeKey].validationState;
-			navState.form.$setUntouched();
-			navState.form.$setPristine();
-			navState.form.$setSubmitted();
-			ctx.data = data;
+			if(data.scope.noNavigation) {
+				var navState = data.scope.noNavigation[data.ctx.component.scopeKey].validationState;
+				navState.form.$setUntouched();
+				navState.form.$setPristine();
+				navState.form.$setSubmitted();
+			}
 
+			ctx.data = data;
 			resolve(ctx);
 		}
 
@@ -392,7 +394,7 @@
 			});
 		}
 
-		function _undo(ctx, btnCfg, scope, el, e, dataKey, undoDataKey) {
+		function _undo(ctx, scope, el, dataKey, undoDataKey) {
 			var data = noInfoPath.getItem(scope, dataKey),
 				undoData = noInfoPath.getItem(scope, undoDataKey);
 
@@ -562,7 +564,7 @@
 			console.log("noTabs ctx.isDirty", ctx.isDirty);
 
 			if(ctx.isDirty) return;
-			
+
 			var ul = el.find("ul").first(),
 				tab = ul.find("li.active"),
 				ndx = tab.attr("ndx"),
@@ -570,7 +572,8 @@
 				pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']"),
 				//el.find("no-tab-panel[ndx='" + ndx + "']").first(),
 				tabKey = ctx.component && ctx.component.scopeKey ? ctx.component.scopeKey : "noTabs_" + noid,
-				execQueue = ctx.component && ctx.component.actions ? noActionQueue.createQueue(ctx, scope, el, ctx.component.actions) : undefined;
+				actions = (ctx.component && ctx.component.actions) || (ctx.widget && ctx.widget.actions),
+				execQueue = actions ? noActionQueue.createQueue(ctx, scope, el, actions) : undefined;
 
 
 			//First deactivate the active tab.
@@ -603,7 +606,11 @@
 
 			//$scope.$broadcast("noGrid::refresh", $scope.docGrid ? $scope.docGrid._id : "");
 
-			if(execQueue) noActionQueue.synchronize(execQueue);
+			if(execQueue) {
+				noActionQueue.synchronize(execQueue);
+			}else{
+				//scope.$broadcast("")
+			}
 
 		}
 
@@ -667,6 +674,10 @@
 						}
 
 						ul.find("li > a").click(_click.bind(ctx, ctx, scope, el));
+
+						var tab = el.find("ul").find("li.active");
+						tab.children("a").click();
+
 					});
 
 			} else {
@@ -675,37 +686,46 @@
 				ds = noDataSource.create(dsCfg, scope);
 
 				noDataManager.cacheRead(dsCfg.name, ds)
-				.then(function (data) {
-					var ul = el.find("ul").first(),
-					pnls = el.find("no-tab-panels").first();
+					.then(function (data) {
+						var ul = el.find("ul").first(),
+						pnls = el.find("no-tab-panels").first();
 
-					ul.addClass(_resolveOrientation(ctx.widget));
+						ul.addClass(_resolveOrientation(ctx.widget));
 
-					el.find("no-tab-panels").first().addClass("tab-panels");
+						el.find("no-tab-panels").first().addClass("tab-panels");
 
-					if(ctx.widget.orientation !== "left-flex") {
-						el.find("no-tab-panels").first().addClass("col-sm-10");
+						if(ctx.widget.orientation !== "left-flex") {
+							el.find("no-tab-panels").first().addClass("col-sm-10");
 
-						el.find("no-tab-panels > no-tab-panel > div").addClass("no-m-t-lg");
-					}
-
-					for(var i = 0, ndx = 0; i < data.length; i++) {
-						var li = angular.element("<li></li>"),
-						a = angular.element("<a href=\"\#\"></a>"),
-						datum = data[i];
-						if(i === 0) {
-							li.addClass("active");
+							el.find("no-tab-panels > no-tab-panel > div").addClass("no-m-t-lg");
 						}
-						li.attr("ndx", datum[ctx.widget.valueField]);
-						a.text(datum[ctx.widget.textField]);
 
-						li.append(a);
+						for(var i = 0, ndx = 0; i < data.length; i++) {
+							var li = angular.element("<li></li>"),
+							a = angular.element("<a href=\"\#\"></a>"),
+							datum = data[i];
+							if(i === 0) {
+								li.addClass("active");
+							}
+							li.attr("ndx", datum[ctx.widget.valueField]);
+							a.text(datum[ctx.widget.textField]);
 
-						ul.append(li);
-					}
+							li.append(a);
 
-					ul.find("li > a").click(_click.bind(ctx, ctx, scope, el));
-				});
+							ul.append(li);
+						}
+
+						ul.find("li > a").click(_click.bind(ctx, ctx, scope, el));
+
+						var tab = el.find("ul").find("li.active");
+						tab.children("a").click();
+						// pnl = el.find("no-tab-panels").first(),
+						// ndx2 = tab.attr("ndx"),
+						// noid = el.attr("noid"),
+						// key = "noTabs_" + noid;
+
+
+					});
 			}
 
 		}
@@ -851,7 +871,7 @@
 
 		function _compile(el, attrs) {
 			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
-			el.attr("noid", noInfoPath.createNoid());
+			//el.attr("noid", noInfoPath.createNoid());
 			return _link.bind(ctx, ctx);
 		}
 
@@ -883,6 +903,8 @@
 
 				el.append(btnBar);
 			}
+
+			noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
 
 			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
 			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));

@@ -69,7 +69,7 @@
 
 		function _compile(el, attrs) {
 			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
-			el.attr("noid", noInfoPath.createNoid());
+			//el.attr("noid", noInfoPath.createNoid());
 			return _link.bind(ctx, ctx);
 		}
 
@@ -101,6 +101,8 @@
 
 				el.append(btnBar);
 			}
+
+			noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
 
 			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
 			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
