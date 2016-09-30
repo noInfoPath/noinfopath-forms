@@ -998,6 +998,13 @@
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
 			//console.log("changeNavBar", arguments);
+			if(barid === "^") {
+				var t = noInfoPath.getItem(scope,  "noNavigation." + navBarName + ".currentNavBar"),
+					p = t.split(".");
+
+				barid = p[0];
+			}
+
 			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".currentNavBar", barid);
 		};
 
