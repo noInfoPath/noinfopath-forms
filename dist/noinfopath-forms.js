@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.10
+ * @version 2.0.11
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -616,6 +616,7 @@
 				//scope.$broadcast("")
 			}
 
+			PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
 		}
 
 		function _static(ctx, scope, el, attrs) {

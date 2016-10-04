@@ -78,7 +78,7 @@ module.exports = function(grunt) {
 
 
 	//Default task(s).
-    grunt.registerTask('build', ['karma:continuous', 'bumpup', 'version', 'concat:noinfopath', 'nodocs:internal', 'concat:readme']);
+    grunt.registerTask('build', ['bumpup', 'version', 'concat:noinfopath', 'nodocs:internal', 'concat:readme']);
     grunt.registerTask('unstable', ['bumpup', 'version', 'concat:noinfopath', 'nodocs:internal', 'concat:readme', 'concat:dexie']);
     grunt.registerTask('notest', ['concat:noinfopath', 'copy:test']);
     grunt.registerTask('uglytest', ['concat:noinfopath', 'uglify', 'karma:ugly']);
