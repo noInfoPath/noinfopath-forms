@@ -69,6 +69,7 @@
 				//scope.$broadcast("")
 			}
 
+			PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
 		}
 
 		function _static(ctx, scope, el, attrs) {
