@@ -603,7 +603,8 @@
 			} else {
 				noInfoPath.setItem(scope, tabKey, {
 					ndx: ndx,
-					btnBar: tab.children("a").attr("btnbar")
+					btnBar: tab.children("a").attr("btnbar"),
+					title: tab.children("a").text()
 				});
 			}
 
@@ -851,12 +852,15 @@
 			var deferred = $q.defer(),
 				execQueue = noActionQueue.createQueue(ctx, scope, el, btnCfg.actions);
 
+			delete scope.noNavigationError;
+
 			return noActionQueue.synchronize(execQueue)
 				.then(function (results) {
 					console.log(results);
 				})
 				.catch(function (err) {
-					console.error(err);
+					scope.noNavigationError = err;
+					throw err;
 				});
 
 		}

@@ -56,7 +56,8 @@
 			} else {
 				noInfoPath.setItem(scope, tabKey, {
 					ndx: ndx,
-					btnBar: tab.children("a").attr("btnbar")
+					btnBar: tab.children("a").attr("btnbar"),
+					title: tab.children("a").text()
 				});
 			}
 

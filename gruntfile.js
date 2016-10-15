@@ -63,7 +63,7 @@ module.exports = function(grunt) {
 		},
 		watch: {
 			files: ['src/*.js', 'test/*.spec.js'],
-			tasks: ['compile']
+			tasks: ['document']
 		}
 	});
 
