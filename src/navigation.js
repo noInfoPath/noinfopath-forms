@@ -2,7 +2,7 @@
 (function (angular, undefined) {
 	"use strict";
 
-	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub) {
+	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers) {
 		var templateFactories = {
 			"button": function (ctx, cfg, scope, el) {
 
@@ -63,7 +63,7 @@
 
 		function _changeNavBar(ctx, el, n, o, s) {
 			//console.log(ctx, el, n, o, s);
-			if(n !== o) {
+			if(n) {
 				el.find("navbar").addClass("ng-hide");
 				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
 
@@ -109,10 +109,52 @@
 				el.append(btnBar);
 			}
 
-			noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
+			if(ctx.component.useKendoRowDataUid) {
+				var uid =  noKendoHelpers.getGridRowUID(el).replace(/-/g, "_");
+
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", ctx.component.default);
+
+				var unRegWatch = scope.$watch("noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".deregister", unRegWatch);
+
+				var target = noKendoHelpers.getGridRow(el).parent()[0];
+
+				// create an observer instance
+				var observer = new MutationObserver(function(ctx, scope, mutations) {
+					for(var m=0; m<mutations.length;m++) {
+						var mutation = mutations[m];
+
+						for(var n=0; n<mutation.removedNodes.length;n++) {
+							var uid = mutation.removedNodes[n].attributes["data-uid"].value.replace(/-/g, "_"),
+								non = noInfoPath.getItem(scope, "noNavigation"),
+								watch = non[ctx.component.scopeKey + "_" + uid];
+
+								if(watch && watch.deregister) {
+									watch.deregister();
+
+									delete non[ctx.component.scopeKey + "_" + uid];
+								}
+						}
+					}
+				}.bind(ctx, ctx, scope));
+
+				// configuration of the observer:
+				var config = { attributes: true, childList: true, characterData: true };
+
+				// pass in the target node, as well as the observer options
+				observer.observe(target, config);
+
+				// later, you can stop observing
+				//observer.disconnect();
+			} else {
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
+				scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+			}
 
 			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
-			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+			//var stopNoNavigationWatch =
+
 
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
 				var cnav = _getCurrentNavBar(navBarName, scope, el),
@@ -127,6 +169,7 @@
 				}else{
 						noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
 				}
+
 				// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
 				// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
 				// }
@@ -134,8 +177,11 @@
 
 			console.log("pubID", pubID);
 			scope.$on("$destroy", function () {
-				console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
+				//console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
 				PubSub.unsubscribe(pubID);
+				if(observer) observer.disconnect();
+
+				//stopNoNavigationWatch();
 			});
 
 			// scope.$watchCollection(ctx.primary.scopeKey, function (navBarName, e) {
@@ -161,7 +207,7 @@
 		};
 	}
 
-	function NoNavigationManagerService($q, $http, $state) {
+	function NoNavigationManagerService($q, $http, $state, noKendoHelpers) {
 		this.configure = function () {
 			return $q(function (resolve, reject) {
 				var routes;
@@ -194,15 +240,36 @@
 		};
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
+			var barkey = navBarName;
 			//console.log("changeNavBar", arguments);
 			if(barid === "^") {
-				var t = noInfoPath.getItem(scope,  "noNavigation." + navBarName + ".currentNavBar"),
+				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),
 					p = t.split(".");
 
 				barid = p[0];
 			}
 
-			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".currentNavBar", barid);
+			noInfoPath.setItem(scope, "noNavigation." + barkey + ".currentNavBar", barid);
+		};
+
+		this.changeGridRowNavBar = function (ctx, scope, el, gridScopeId, navBarName, barid) {
+
+			var grid = scope[gridScopeId],
+				tr = grid.wrapper.find(".k-grid-edit-row"),
+				uid = (tr.attr("data-uid") || "").replace(/-/g, "_"),
+				barkey = navBarName + "_" + uid;
+
+			if(!uid) return;
+			
+			//console.log("changeNavBar", arguments);
+			if(barid === "^") {
+				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),
+					p = t.split(".");
+
+				barid = p[0];
+			}
+
+			noInfoPath.setItem(scope, "noNavigation." + barkey + ".currentNavBar", barid);
 		};
 
 		this.updateValidationState = function (scope, navBarName, state) {
@@ -415,7 +482,7 @@
 		};
 	}])
 
-	.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", NoNavigationDirective])
+	.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
 
-	.service("noNavigationManager", ["$q", "$http", "$state", NoNavigationManagerService]);
+	.service("noNavigationManager", ["$q", "$http", "$state", "noKendoHelpers", NoNavigationManagerService]);
 })(angular);
