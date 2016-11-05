@@ -58,7 +58,10 @@
 		}
 
 		function _getCurrentNavBar(navBarName, scope, el) {
-			return el.find("navbar[bar-id='" + scope.noNavigation[navBarName].currentNavBar + "']");
+			//var nbc = scope.noNavigation[navBarName],;
+
+			//if(nb)
+			return el.find("navbar[bar-id='" + nb.currentNavBar + "']");
 		}
 
 		function _changeNavBar(ctx, el, n, o, s) {
@@ -80,6 +83,8 @@
 			var bars = ctx.component.bars,
 				pubID;
 
+			el.empty();
+
 			for(var b in bars) {
 				var bar = bars[b],
 					btnBar = angular.element("<navbar></navbar>");
@@ -95,6 +100,7 @@
 				if(b !== ctx.component.default) {
 					btnBar.addClass("ng-hide");
 				}
+
 
 				for(var c in bar.components) {
 					var comp = bar.components[c],
@@ -114,19 +120,19 @@
 
 				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", ctx.component.default);
 
-				var unRegWatch = scope.$watch("noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+				var unRegWatch = scope.$watch("noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
 
 				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".deregister", unRegWatch);
 
 				var target = noKendoHelpers.getGridRow(el).parent()[0];
 
 				// create an observer instance
-				var observer = new MutationObserver(function(ctx, scope, mutations) {
+				var observer = new MutationObserver(function(ctx, scope, el, mutations) {
 					for(var m=0; m<mutations.length;m++) {
 						var mutation = mutations[m];
 
 						for(var n=0; n<mutation.removedNodes.length;n++) {
-							var uid = mutation.removedNodes[n].attributes["data-uid"].value.replace(/-/g, "_"),
+							var uid = noInfoPath.toScopeSafeGuid(mutation.removedNodes[n].attributes["data-uid"].value),
 								non = noInfoPath.getItem(scope, "noNavigation"),
 								watch = non[ctx.component.scopeKey + "_" + uid];
 
@@ -136,8 +142,15 @@
 									delete non[ctx.component.scopeKey + "_" + uid];
 								}
 						}
+
+						for(var n1=0; n1<mutation.addedNodes.length;n1++) {
+							var uidN = noInfoPath.toScopeSafeGuid(mutation.addedNodes[n1].attributes["data-uid"].value),
+								nonN = noInfoPath.getItem(scope, "noNavigation");
+
+							noKendoHelpers.ngCompileSelectedRow(ctx, scope, el, "noGrid");
+						}
 					}
-				}.bind(ctx, ctx, scope));
+				}.bind(ctx, ctx, scope, el));
 
 				// configuration of the observer:
 				var config = { attributes: true, childList: true, characterData: true };
@@ -255,12 +268,14 @@
 		this.changeGridRowNavBar = function (ctx, scope, el, gridScopeId, navBarName, barid) {
 
 			var grid = scope[gridScopeId],
-				tr = grid.wrapper.find(".k-grid-edit-row"),
+				tr = /*grid.wrapper.find(".k-grid-edit-row") ||*/ grid.select(),
 				uid = (tr.attr("data-uid") || "").replace(/-/g, "_"),
 				barkey = navBarName + "_" + uid;
 
 			if(!uid) return;
-			
+
+			if(grid.editable && grid.editable.validatable && grid.editable.validatable.errors().length > 0) return;
+
 			//console.log("changeNavBar", arguments);
 			if(barid === "^") {
 				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),

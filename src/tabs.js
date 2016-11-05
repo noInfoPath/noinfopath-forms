@@ -4,7 +4,7 @@
 		function _resolveOrientation(noTab) {
 			var ul = "nav nav-tabs";
 
-			switch(noTab.orientation.toLowerCase()) {
+			switch((noTab.orientation || "").toLowerCase()) {
 				case "left":
 					ul = "nav nav-tabs tabs-left col-sm-2";
 					break;
