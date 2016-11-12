@@ -154,9 +154,15 @@
 						el.find("no-tab-panels").first().addClass("tab-panels");
 
 						if(ctx.widget.orientation !== "left-flex") {
-							el.find("no-tab-panels").first().addClass("col-sm-10");
 
-							el.find("no-tab-panels > no-tab-panel > div").addClass("no-m-t-lg");
+							if(ctx.widget.class) {
+								//TODO: Implement class as an object that contains properties for
+								//		the different components of the tabs that are dynamically
+								//		create by the widget.
+							}else{
+								el.find("no-tab-panels").first().addClass("col-sm-10");
+								el.find("no-tab-panels > no-tab-panel > div").addClass("no-m-t-lg");
+							}
 						}
 
 						for(var i = 0, ndx = 0; i < data.length; i++) {

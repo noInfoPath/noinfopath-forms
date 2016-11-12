@@ -58,10 +58,13 @@
 		}
 
 		function _getCurrentNavBar(navBarName, scope, el) {
-			//var nbc = scope.noNavigation[navBarName],;
+			var nbc = scope.noNavigation[navBarName];
 
-			//if(nb)
-			return el.find("navbar[bar-id='" + nb.currentNavBar + "']");
+			if(nbc)
+				return el.find("navbar[bar-id='" + nbc.currentNavBar + "']");
+			else {
+				throw {error: "could not locate navbar on scope.", navBarName: navBarName, scope: scope, el: el};
+			}
 		}
 
 		function _changeNavBar(ctx, el, n, o, s) {
@@ -163,30 +166,31 @@
 			} else {
 				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
 				scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+				pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
+					var cnav = _getCurrentNavBar(navBarName, scope, el),
+						barid = cnav.attr("bar-id").split(".")[0],
+						baridDirty = (barid || "") + ".dirty";
+
+					console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
+					noNavigationManager.updateValidationState(scope, navBarName, state);
+
+					if(state.isDirty) {
+							noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
+					}else{
+							noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+					}
+
+					// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
+					// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+					// }
+				}.bind(ctx, ctx.component.scopeKey));
 			}
 
 			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
 			//var stopNoNavigationWatch =
 
 
-			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
-				var cnav = _getCurrentNavBar(navBarName, scope, el),
-					barid = cnav.attr("bar-id").split(".")[0],
-					baridDirty = (barid || "") + ".dirty";
 
-				console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
-				noNavigationManager.updateValidationState(scope, navBarName, state);
-
-				if(state.isDirty) {
-						noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
-				}else{
-						noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-				}
-
-				// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
-				// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-				// }
-			}.bind(ctx, ctx.component.scopeKey));
 
 			console.log("pubID", pubID);
 			scope.$on("$destroy", function () {
