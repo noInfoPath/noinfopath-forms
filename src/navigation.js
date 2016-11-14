@@ -28,10 +28,10 @@
 					},
 					"back": function(nbCfg) {
 						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
-							// params = {
-							// 	entity: $state.params.entity
-							// };
-							params = scope.noNav[route];
+							params = {
+								entity: $state.params.entity
+							};
+							// params = scope.noNav[route];
 
 						$state.go(route, params);
 					},
@@ -39,10 +39,10 @@
 						noFormConfig.showNavBar(noFormConfig.navBarNames.WRITEABLE);
 					},
 					"new": function(nbCfg) {
-						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
-							params = scope.$root.noNav[route];
-
-						params = params ? params : {};
+						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav);
+						// 	params = scope.$root.noNav[route];
+						//
+						var params = {};
 
 						params.entity = $state.params.entity;
 						if (attrs.noNav === "new" && route == "vd.entity.edit") {
@@ -179,9 +179,23 @@
 		};
 	}])
 
-	.directive("noReadOnly", [function() {
+	.directive("noReadOnly", ["$state", "noFormConfig", function($state, noFormConfig) {
 		function _link(scope, el, attrs) {
+			var config;
+
 			el.append("<div class=\"no-editor-cover\"></div>");
+
+			config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope);
+
+			if(config && config.noForm.noReadOnly){
+				if(config.noForm.noReadOnly.defaultState){
+					angular.element(".no-editor-cover")
+						.removeClass("ng-hide");
+				} else {
+					angular.element(".no-editor-cover")
+						.addClass("ng-hide");
+				}
+			}
 		}
 
 		return {
@@ -190,7 +204,157 @@
 		};
 	}])
 
-	.service("noNavigation", ["$q", "$http", "$state", function($q, $http, $state) {
+	.directive("noNavigation", ["$injector", "$q", "$state", "$compile", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", function($injector, $q, $state, $compile, noFormConfig, noActionQueue, noNavigationManager, PubSub) {
+		var templateFactories = {
+			"button": function (ctx, cfg, scope, el) {
+
+				var btn = angular.element("<button type=\"button\"></button>"),
+					icon = angular.element("<span></span>");
+
+				btn.addClass(cfg.class);
+
+				if(cfg.label) {
+					btn.append(cfg.label);
+				}
+
+				if(cfg.icon) {
+					icon.addClass(cfg.icon.class);
+					switch(cfg.icon.position) {
+						case "left":
+							btn.prepend(icon);
+							break;
+
+						default:
+							btn.append(icon);
+							break;
+					}
+				}
+
+				return btn;
+			},
+			"message": function (ctx, cfg, scope, el) {
+				var div = angular.element("<div></div>");
+				div.html(cfg.template);
+				div.addClass(cfg.class);
+				return $compile(div)(scope);
+			}
+		};
+
+		function _click(ctx, btnCfg, scope, el, e) {
+			e.preventDefault();
+
+			var deferred = $q.defer(),
+				execQueue = noActionQueue.createQueue(ctx, scope, el, btnCfg.actions);
+
+			return noActionQueue.synchronize(execQueue)
+				.then(function (results) {
+					console.log(results);
+				})
+				.catch(function (err) {
+					console.error(err);
+				});
+
+		}
+
+		function _getCurrentNavBar(navBarName, scope, el) {
+			return el.find("navbar[bar-id='" + scope.noNavigation[navBarName].currentNavBar + "']");
+		}
+
+		function _changeNavBar(ctx, el, n, o, s) {
+			//console.log(ctx, el, n, o, s);
+			if(n !== o) {
+				el.find("navbar").addClass("ng-hide");
+				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
+
+			}
+		}
+
+		function _compile(el, attrs) {
+			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
+			//el.attr("noid", noInfoPath.createNoid());
+			return _link.bind(ctx, ctx);
+		}
+
+		function _link(ctx, scope, el, attrs) {
+			var bars = ctx.component.bars,
+				pubID;
+
+			if(angular.isObject(ctx.component.default)){
+				var prov = $injector.get(ctx.component.default.provider),
+					meth = !!ctx.component.default.method ? prov[ctx.component.default.method] : undefined,
+					prop = !!meth ? meth(ctx.component.default.property) : prov[ctx.component.default.property];
+
+				if(prop){
+					ctx.component.default = ctx.component.default.truthyBar;
+				} else {
+					ctx.component.default = ctx.component.default.falsyBar;
+				}
+			}
+
+			for(var b in bars) {
+				var bar = bars[b],
+					btnBar = angular.element("<navbar></navbar>");
+
+				if(angular.isString(bar)){
+					bar = bars[bar];  //Aliased
+				}
+
+				btnBar.attr("bar-id", b);
+
+				btnBar.addClass(bar.class);
+
+				if(b !== ctx.component.default) {
+					btnBar.addClass("ng-hide");
+				}
+
+				for(var c in bar.components) {
+					var comp = bar.components[c],
+						tmpl = templateFactories[comp.type],
+						btn = tmpl(ctx, comp, scope, el);
+
+					if(comp.type === "button"){
+						btn.click(_click.bind(ctx, ctx, comp, scope, el));
+					}
+
+					btnBar.append(btn);
+				}
+
+				el.append(btnBar);
+			}
+
+			noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
+
+			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+
+			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
+				var cnav = _getCurrentNavBar(navBarName, scope, el),
+					barid = cnav.attr("bar-id").split(".")[0],
+					baridDirty = (barid || "") + ".dirty";
+
+				console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
+				noNavigationManager.updateValidationState(scope, navBarName, state);
+
+				if(state.isDirty) {
+						noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
+				}else{
+						noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+				}
+
+			}.bind(ctx, ctx.component.scopeKey));
+
+			scope.$on("$destroy", function () {
+				console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
+				PubSub.unsubscribe(pubID);
+			});
+		}
+
+		return {
+			restrict: "E",
+			compile: _compile
+		};
+	}])
+
+	.service("noNavigationOld", ["$q", "$http", "$state", function($q, $http, $state) {
 		this.configure = function() {
 			return $q(function(resolve, reject) {
 				var routes;
@@ -220,6 +384,55 @@
 					.then(configureStates)
 					.catch(reject);
 			});
+		};
+	}])
+
+	.service("noNavigationManager", ["$q", "$http", "$state", function($q, $http, $state){
+
+		this.configure = function(){
+			return $q(function (resolve, reject) {
+				var routes;
+
+				function saveRoutes(resp) {
+					routes = resp.data;
+
+					return $q.when(true);
+				}
+
+				function configureStates() {
+					for(var r in routes) {
+						var route = routes[r];
+
+						route.data = angular.merge({
+							entities: {}
+						}, route.data);
+
+						stateProvider.state(route.name, route);
+					}
+
+					resolve();
+				}
+
+				$http.get("navbars/routes.json")
+					.then(saveRoutes)
+					.then(configureStates)
+					.catch(reject);
+			});
+		};
+
+		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
+			if(barid === "^") {
+				var t = noInfoPath.getItem(scope,  "noNavigation." + navBarName + ".currentNavBar"),
+					p = t.split(".");
+
+				barid = p[0];
+			}
+
+			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".currentNavBar", barid);
+		};
+
+		this.updateValidationState = function (scope, navBarName, state) {
+			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".validationState", state);
 		};
 	}]);
 })(angular);

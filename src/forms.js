@@ -34,6 +34,97 @@
 		};
 	}
 
+	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser) {
+		function _initSession(ctx, scope) {
+			console.log(ctx);
+		}
+
+		function _successful(ctx, resolve, data) {
+			if(data.scope.noNavigation) {
+				var navState = data.scope.noNavigation[data.ctx.component.scopeKey].validationState;
+				navState.form.$setUntouched();
+				navState.form.$setPristine();
+				navState.form.$setSubmitted();
+			}
+
+			ctx.data = data;
+
+			// if(ctx.form.noReset){
+			// 	data.scope[ctx.form.primaryComponent + "Reset"] = angular.copy(data.scope[ctx.form.primaryComponent]);
+			// }
+
+			resolve(ctx);
+		}
+
+		function _fault(ctx, reject, err) {
+			ctx.error = err;
+			reject(ctx);
+		}
+
+		function _save(ctx, scope, el, data) {
+
+			return $q(function (resolve, reject) {
+				var noForm = ctx.form,
+					comp = noForm.noComponents[noForm.primaryComponent],
+					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
+					newctx = {
+						ctx: ctx,
+						comp: comp,
+						trans: noTrans,
+						scope: scope
+					};
+
+				if(data.$valid) {
+					noTrans.upsert(data)
+						.then(_successful.bind(null, ctx, resolve, newctx))
+						.catch(_fault.bind(null, ctx, reject, newctx));
+				} else {
+					reject("Form is invalid.");
+				}
+			});
+		}
+
+		function _undo(ctx, scope, el, dataKey, undoDataKey) {
+			var data = noInfoPath.getItem(scope, dataKey),
+				undoData = noInfoPath.getItem(scope, undoDataKey);
+
+			console.log(data, undoData);
+
+			return $q(function (resolve, reject) {
+				resolve("undo code required.");
+			});
+		}
+
+		function _cacheRead(cacheKey, dataSource) {
+
+			var data = noInfoPath.getItem($rootScope, "noDataCache." + cacheKey),
+				promise;
+
+			if(dataSource.cache) {
+				if(data) {
+					promise = $q.when(data);
+				} else {
+					promise = dataSource.read()
+						.then(function (ck, data) {
+							noInfoPath.setItem($rootScope, "noDataCache." + cacheKey, data);
+							return data;
+						}.bind(null, cacheKey));
+				}
+			} else {
+				promise = dataSource.read();
+			}
+
+
+			return promise;
+		}
+
+		this.save = _save;
+		this.undo = _undo;
+		this.initSession = _initSession;
+		this.beginTransaction = _initSession;
+		this.cacheRead = _cacheRead;
+	}
+
 	angular.module("noinfopath.forms")
 		/*
 		 *	## noForm : Directive
@@ -320,7 +411,7 @@
 	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", function($q, $http, $compile, noFormConfig, $state) {
 
 		function getTemplateUrl(el, attrs) {
-			var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-kendo.html";
+			var url = attrs.templateUrl ? attrs.templateUrl : "/no-record-stats-angular.html";
 			return url;
 		}
 
@@ -354,6 +445,65 @@
 
 	}])
 
-	.directive("noGrowler", ["$timeout", NoGrowlerDirective]);
+	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
+
+	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService])
+
+	.service("noParameterParser", [function () {
+			this.parse = function (data) {
+				var keys = Object.keys(data).filter(function (v, k) {
+						if(v.indexOf("$") === -1 && v.indexOf(".") === -1) return v;
+					}),
+					values = {};
+				keys.forEach(function (k) {
+					var haveSomething = !!data[k],
+						haveModelValue = haveSomething && data[k].hasOwnProperty("$modelValue");
+
+					if(haveModelValue) {
+						values[k] = data[k].$modelValue;
+					} else if(haveSomething) {
+						values[k] =  data[k];
+					} else {
+						values[k] = "";
+					}
+
+				});
+
+				return values;
+			};
+			this.update = function (src, dest) {
+				var keys = Object.keys(src).filter(function (v, k) {
+					if(v.indexOf("$") === -1) return v;
+				});
+				keys.forEach(function (k) {
+					var d = dest[k];
+					if(d && d.hasOwnProperty("$viewValue")) {
+						d.$setViewValue(src[k]);
+						d.$render();
+						d.$setPristine();
+						d.$setUntouched();
+					} else {
+						dest[k] = src[k];
+					}
+				});
+			};
+		}])
+
+		.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser){
+			return {
+				restrict: "A",
+				require: "form",
+				link: function(scope, el, attrs, form){
+					//watch for validation flags and broadcast events down this
+					//directives hierarchy.
+					var wk = form.$name + ".$dirty";
+					console.log(wk, Object.is(form, scope[wk]));
+					scope.$watch(wk, function() {
+						//console.log(wk, arguments);
+						pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});
+					});
+				}
+			};
+		}]);
 
 })(angular);

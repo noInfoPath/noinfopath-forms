@@ -118,7 +118,7 @@
 	 */
 	.directive("noSubmit", ["$injector", "$rootScope", function($injector, $rootScope) {
 		return {
-			restrict: "A",
+			restrict: "AC",
 			require: "?^form",
 			link: function(scope, el, attr, form) {
 				console.info("Linking noSubmit");

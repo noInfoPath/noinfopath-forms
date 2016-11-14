@@ -563,7 +563,7 @@
 		 *
 		 * @returns object
 		 */
-		this.getFormByRoute = function(routeName, entityName) {
+		function getFormByRoute(routeName, entityName) {
 			if(!routeName) throw "routeName is a require parameter";
 
 			if (entityName) { // This is here to prevent a regression.
@@ -571,7 +571,8 @@
 			} else {
 				return getRoute("route.name", routeName);
 			}
-		};
+		}
+		this.getFormByRoute = getFormByRoute;
 
 		/**
 		 * @method getRoute(routeKey, routeData)
@@ -600,6 +601,59 @@
 
 			return formCfg;
 		}
+
+		function _resolveDataSource(datasources, dsCfg) {
+ 			var ds;
+
+ 			if(dsCfg && dsCfg.dataProvider) {
+ 				ds = dsCfg;
+ 			} else {
+ 				ds = dsCfg ? datasources[dsCfg.name || dsCfg] : undefined;
+ 			}
+
+ 			if(!ds) return;
+
+ 			if(angular.isObject(dsCfg)) {
+ 				ds = angular.merge(dsCfg, ds);
+ 			} else {
+ 				ds.name = dsCfg;
+ 			}
+
+ 			if(!ds) throw "DataSource " + dsCfg.name + "was not found in the global datasources collection.";
+
+ 			return ds;
+ 		}
+
+		function getComponentContextByRoute(routeName, entityName, componentType, componentKey) {
+
+ 			var config = getFormByRoute($state.current.name, $state.params.entity) || {},
+ 				route = noInfoPath.getItem(config, "route"),
+ 				form = noInfoPath.getItem(config, "noForm"),
+ 				component = noInfoPath.getItem(config, componentKey),
+ 				widget = component ? component[componentType] : undefined,
+ 				primary = form.primaryComponent ? noInfoPath.getItem(form.noComponents, form.primaryComponent) : undefined,
+ 				datasources = config.noDataSources || {},
+ 				dsCfg;
+
+ 			if(primary) {
+ 				dsCfg = primary.noDataSource;
+ 			} else if(component) {
+ 				dsCfg = component.noDataSource;
+ 			}
+
+ 			return {
+ 				config: config,
+ 				route: route,
+ 				form: form,
+ 				component: component,
+ 				widget: widget,
+ 				primary: primary,
+ 				datasources: datasources,
+ 				datasource: _resolveDataSource(datasources, dsCfg),
+ 				resolveDataSource: _resolveDataSource.bind(null, datasources)
+ 			};
+ 		}
+		this.getComponentContextByRoute = getComponentContextByRoute;
 
 		/**
 		 * @method navBarRoute(stateName)
