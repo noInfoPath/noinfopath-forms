@@ -343,15 +343,17 @@
 			console.log(ctx);
 		}
 
-		function _successful(ctx, resolve, data) {
-			if(data.scope.noNavigation) {
-				var navState = data.scope.noNavigation[data.ctx.component.scopeKey].validationState;
+		function _successful(ctx, resolve, newctx, data) {
+			if(newctx.scope.noNavigation) {
+				var navState = newctx.scope.noNavigation[newctx.ctx.component.scopeKey].validationState;
 				navState.form.$setUntouched();
 				navState.form.$setPristine();
 				navState.form.$setSubmitted();
 			}
 
 			ctx.data = data;
+			noTransactionCache.endTransaction(newctx.trans);
+
 			resolve(ctx);
 		}
 
