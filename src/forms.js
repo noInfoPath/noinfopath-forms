@@ -346,9 +346,16 @@
 		function _successful(ctx, resolve, newctx, data) {
 			if(newctx.scope.noNavigation) {
 				var navState = newctx.scope.noNavigation[newctx.ctx.component.scopeKey].validationState;
-				navState.form.$setUntouched();
-				navState.form.$setPristine();
-				navState.form.$setSubmitted();
+
+				if(navState.form.accept) {
+
+					navState.form.accept(navState.form);
+
+				} else {
+					navState.form.$setUntouched();
+					navState.form.$setPristine();
+					navState.form.$setSubmitted();
+				}
 			}
 
 			ctx.data = data;
