@@ -33,7 +33,7 @@
 
 
 	function _blur(el, field) {
-		if (!field.$pristine) _validate(el, field);
+		if(field && !field.$pristine) _validate(el, field);
 	}
 
 	/*
@@ -115,10 +115,22 @@
 	 * ## noSubmit
 	 *
 	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+	 *
+	 *	### Events
+	 *
+	 *	The noSubmit directive will broadcast events on the root scope to notify
+	 *	the implementor that the data submitted is valid.
+	 *
+	 *	#### noSubmit::dataReady
+	 *
+	 *	Raise when the data submmited has passed all validations. Along with the
+	 *	standard event object, the broadcast also sends a reference to the element
+	 *	that has the noSubmit directive attached to it, the scope, and a timestamp.
+	 *
 	 */
 	.directive("noSubmit", ["$injector", "$rootScope", function($injector, $rootScope) {
 		return {
-			restrict: "AC",
+			restrict: "A",
 			require: "?^form",
 			link: function(scope, el, attr, form) {
 				console.info("Linking noSubmit");
@@ -212,5 +224,21 @@
 		return directive;
 	}])
 
+	.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser){
+		return {
+			restrict: "A",
+			require: "form",
+			link: function(scope, el, attrs, form){
+				//watch for validation flags and broadcast events down this
+				//directives hierarchy.
+				var wk = form.$name + ".$dirty";
+				console.log(wk, Object.is(form, scope[wk]));
+				scope.$watch(wk, function() {
+					//console.log(wk, arguments);
+					pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});
+				});
+			}
+		};
+	}])
 	;
 })(angular);

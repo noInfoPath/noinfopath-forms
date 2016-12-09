@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 1.2.9
+ * @version 1.2.10
  *
  * Combines the functionality of validation from bootstrap and angular.
  *
@@ -57,19 +57,16 @@
 		function _successful(ctx, resolve, newctx, data) {
 			if(newctx.scope.noNavigation) {
 				var navState = newctx.scope.noNavigation[newctx.ctx.component.scopeKey].validationState;
-				navState.form.$setUntouched();
-				navState.form.$setPristine();
-				navState.form.$setSubmitted();
+				if(navState.form.accept) {
+					navState.form.accept(navState.form);
+				} else {
+					navState.form.$setUntouched();
+					navState.form.$setPristine();
+					navState.form.$setSubmitted();
+				}
 			}
-
 			ctx.data = data;
-
-			// if(ctx.form.noReset){
-			// 	data.scope[ctx.form.primaryComponent + "Reset"] = angular.copy(data.scope[ctx.form.primaryComponent]);
-			// }
-
 			noTransactionCache.endTransaction(newctx.trans);
-
 			resolve(ctx);
 		}
 
@@ -504,23 +501,6 @@
 					}
 				});
 			};
-		}])
-
-		.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser){
-			return {
-				restrict: "A",
-				require: "form",
-				link: function(scope, el, attrs, form){
-					//watch for validation flags and broadcast events down this
-					//directives hierarchy.
-					var wk = form.$name + ".$dirty";
-					console.log(wk, Object.is(form, scope[wk]));
-					scope.$watch(wk, function() {
-						//console.log(wk, arguments);
-						pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});
-					});
-				}
-			};
 		}]);
 
 })(angular);
@@ -528,6 +508,174 @@
 (function(angular, undefined) {
 	"use strict";
 	var stateProvider;
+
+	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers) {
+		var templateFactories = {
+			"button": function (ctx, cfg, scope, el) {
+				var btn = angular.element("<button type=\"button\"></button>"),
+					icon = angular.element("<span></span>");
+				btn.addClass(cfg.class);
+				if(cfg.label) {
+					btn.append(cfg.label);
+				}
+				if(cfg.icon) {
+					icon.addClass(cfg.icon.class);
+					switch(cfg.icon.position) {
+						case "left":
+							btn.prepend(icon);
+							break;
+						default:
+							btn.append(icon);
+							break;
+					}
+				}
+				return btn;
+			},
+			"message": function (ctx, cfg, scope, el) {
+				var div = angular.element("<div></div>");
+				div.html(cfg.template);
+				div.addClass(cfg.class);
+				return div;
+			}
+		};
+		function _click(ctx, btnCfg, scope, el, e) {
+			e.preventDefault();
+			var deferred = $q.defer(),
+				execQueue = noActionQueue.createQueue(ctx, scope, el, btnCfg.actions);
+			delete scope.noNavigationError;
+			return noActionQueue.synchronize(execQueue)
+				.then(function (results) {
+					console.log(results);
+				})
+				.catch(function (err) {
+					scope.noNavigationError = err;
+					throw err;
+				});
+		}
+		function _getCurrentNavBar(navBarName, scope, el) {
+			var nbc = scope.noNavigation[navBarName];
+			if(nbc)
+				return el.find("navbar[bar-id='" + nbc.currentNavBar + "']");
+			else {
+				throw {error: "could not locate navbar on scope.", navBarName: navBarName, scope: scope, el: el};
+			}
+		}
+		function _changeNavBar(ctx, el, n, o, s) {
+			//console.log(ctx, el, n, o, s);
+			if(n) {
+				el.find("navbar").addClass("ng-hide");
+				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
+			}
+		}
+		function _compile(el, attrs) {
+			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
+			//el.attr("noid", noInfoPath.createNoid());
+			return _link.bind(ctx, ctx);
+		}
+		function _link(ctx, scope, el, attrs) {
+			var bars = ctx.component.bars,
+				pubID;
+			el.empty();
+			for(var b in bars) {
+				var bar = bars[b],
+					btnBar = angular.element("<navbar></navbar>");
+				if(angular.isString(bar)){
+					bar = bars[bar];  //Aliased
+				}
+				btnBar.attr("bar-id", b);
+				btnBar.addClass(bar.class);
+				if(b !== ctx.component.default) {
+					btnBar.addClass("ng-hide");
+				}
+				for(var c in bar.components) {
+					var comp = bar.components[c],
+						tmpl = templateFactories[comp.type],
+						btn = tmpl(ctx, comp, scope, el);
+					btn.click(_click.bind(ctx, ctx, comp, scope, el));
+					btnBar.append(btn);
+				}
+				el.append(btnBar);
+			}
+			if(ctx.component.useKendoRowDataUid) {
+				var uid =  noKendoHelpers.getGridRowUID(el).replace(/-/g, "_");
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", ctx.component.default);
+				var unRegWatch = scope.$watch("noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".deregister", unRegWatch);
+				var target = noKendoHelpers.getGridRow(el).parent()[0];
+				// create an observer instance
+				var observer = new MutationObserver(function(ctx, scope, el, mutations) {
+					for(var m=0; m<mutations.length;m++) {
+						var mutation = mutations[m];
+						for(var n=0; n<mutation.removedNodes.length;n++) {
+							var uid = noInfoPath.toScopeSafeGuid(mutation.removedNodes[n].attributes["data-uid"].value),
+								non = noInfoPath.getItem(scope, "noNavigation"),
+								watch = non[ctx.component.scopeKey + "_" + uid];
+								if(watch && watch.deregister) {
+									watch.deregister();
+									delete non[ctx.component.scopeKey + "_" + uid];
+								}
+						}
+						for(var n1=0; n1<mutation.addedNodes.length;n1++) {
+							var uidN = noInfoPath.toScopeSafeGuid(mutation.addedNodes[n1].attributes["data-uid"].value),
+								nonN = noInfoPath.getItem(scope, "noNavigation");
+							noKendoHelpers.ngCompileSelectedRow(ctx, scope, el, "noGrid");
+						}
+					}
+				}.bind(ctx, ctx, scope, el));
+				// configuration of the observer:
+				var config = { attributes: true, childList: true, characterData: true };
+				// pass in the target node, as well as the observer options
+				observer.observe(target, config);
+				// later, you can stop observing
+				//observer.disconnect();
+			} else {
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
+				scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+				pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
+					var cnav = _getCurrentNavBar(navBarName, scope, el),
+						barid = cnav.attr("bar-id").split(".")[0],
+						baridDirty = (barid || "") + ".dirty";
+					console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
+					noNavigationManager.updateValidationState(scope, navBarName, state);
+					if(state.isDirty) {
+							noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
+					}else{
+							noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+					}
+					// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
+					// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+					// }
+				}.bind(ctx, ctx.component.scopeKey));
+			}
+			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
+			//var stopNoNavigationWatch =
+			console.log("pubID", pubID);
+			scope.$on("$destroy", function () {
+				//console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
+				PubSub.unsubscribe(pubID);
+				if(observer) observer.disconnect();
+				//stopNoNavigationWatch();
+			});
+			// scope.$watchCollection(ctx.primary.scopeKey, function (navBarName, e) {
+			// 	var cnav, barid;
+			// 	if(scope[ctx.primary.scopeKey].$dirty) {
+			// 		cnav = _getCurrentNavBar(navBarName, scope, el);
+			// 		barid = cnav.attr("bar-id") + ".dirty";
+			// 		if(!cnav.attr("bar-id").includes(".dirty")) {
+			// 			noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// 		}
+			// 	} else {
+			// 		cnav = _getCurrentNavBar(navBarName, scope, el);
+			// 		barid = cnav.attr("bar-id").replace(/\.dirty/, "");
+			// 		noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// 	}
+			// }.bind(ctx, ctx.component.scopeKey));
+		}
+		return {
+			restrict: "E",
+			compile: _compile
+		};
+	}
 
 	angular.module("noinfopath.forms")
 		.config(["$stateProvider", function($stateProvider) {
@@ -730,155 +878,9 @@
 		};
 	}])
 
-	.directive("noNavigation", ["$injector", "$q", "$state", "$compile", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", function($injector, $q, $state, $compile, noFormConfig, noActionQueue, noNavigationManager, PubSub) {
-		var templateFactories = {
-			"button": function (ctx, cfg, scope, el) {
 
-				var btn = angular.element("<button type=\"button\"></button>"),
-					icon = angular.element("<span></span>");
 
-				btn.addClass(cfg.class);
-
-				if(cfg.label) {
-					btn.append(cfg.label);
-				}
-
-				if(cfg.icon) {
-					icon.addClass(cfg.icon.class);
-					switch(cfg.icon.position) {
-						case "left":
-							btn.prepend(icon);
-							break;
-
-						default:
-							btn.append(icon);
-							break;
-					}
-				}
-
-				return btn;
-			},
-			"message": function (ctx, cfg, scope, el) {
-				var div = angular.element("<div></div>");
-				div.html(cfg.template);
-				div.addClass(cfg.class);
-				return $compile(div)(scope);
-			}
-		};
-
-		function _click(ctx, btnCfg, scope, el, e) {
-			e.preventDefault();
-
-			var deferred = $q.defer(),
-				execQueue = noActionQueue.createQueue(ctx, scope, el, btnCfg.actions);
-
-			return noActionQueue.synchronize(execQueue)
-				.then(function (results) {
-					console.log(results);
-				})
-				.catch(function (err) {
-					console.error(err);
-				});
-
-		}
-
-		function _getCurrentNavBar(navBarName, scope, el) {
-			return el.find("navbar[bar-id='" + scope.noNavigation[navBarName].currentNavBar + "']");
-		}
-
-		function _changeNavBar(ctx, el, n, o, s) {
-			//console.log(ctx, el, n, o, s);
-			if(n !== o) {
-				el.find("navbar").addClass("ng-hide");
-				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
-
-			}
-		}
-
-		function _compile(el, attrs) {
-			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
-			//el.attr("noid", noInfoPath.createNoid());
-			return _link.bind(ctx, ctx);
-		}
-
-		function _link(ctx, scope, el, attrs) {
-			var bars = ctx.component.bars,
-				pubID;
-
-			if(angular.isObject(ctx.component.default)){
-				var prov = $injector.get(ctx.component.default.provider),
-					meth = !!ctx.component.default.method ? prov[ctx.component.default.method] : undefined,
-					prop = !!meth ? meth(ctx.component.default.property) : prov[ctx.component.default.property];
-
-				if(prop){
-					ctx.component.default = ctx.component.default.truthyBar;
-				} else {
-					ctx.component.default = ctx.component.default.falsyBar;
-				}
-			}
-
-			for(var b in bars) {
-				var bar = bars[b],
-					btnBar = angular.element("<navbar></navbar>");
-
-				if(angular.isString(bar)){
-					bar = bars[bar];  //Aliased
-				}
-
-				btnBar.attr("bar-id", b);
-
-				btnBar.addClass(bar.class);
-
-				if(b !== ctx.component.default) {
-					btnBar.addClass("ng-hide");
-				}
-
-				for(var c in bar.components) {
-					var comp = bar.components[c],
-						tmpl = templateFactories[comp.type],
-						btn = tmpl(ctx, comp, scope, el);
-
-					if(comp.type === "button"){
-						btn.click(_click.bind(ctx, ctx, comp, scope, el));
-					}
-
-					btnBar.append(btn);
-				}
-
-				el.append(btnBar);
-			}
-
-			noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
-
-			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
-
-			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
-				var cnav = _getCurrentNavBar(navBarName, scope, el),
-					barid = cnav.attr("bar-id").split(".")[0],
-					baridDirty = (barid || "") + ".dirty";
-
-				console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
-				noNavigationManager.updateValidationState(scope, navBarName, state);
-
-				if(state.isDirty) {
-						noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
-				}else{
-						noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-				}
-
-			}.bind(ctx, ctx.component.scopeKey));
-
-			scope.$on("$destroy", function () {
-				console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
-				PubSub.unsubscribe(pubID);
-			});
-		}
-
-		return {
-			restrict: "E",
-			compile: _compile
-		};
-	}])
+	.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
 
 	.service("noNavigationOld", ["$q", "$http", "$state", function($q, $http, $state) {
 		this.configure = function() {
@@ -998,7 +1000,7 @@
 
 
 	function _blur(el, field) {
-		if (!field.$pristine) _validate(el, field);
+		if(field && !field.$pristine) _validate(el, field);
 	}
 
 	/*
@@ -1080,10 +1082,22 @@
 	 * ## noSubmit
 	 *
 	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+	 *
+	 *	### Events
+	 *
+	 *	The noSubmit directive will broadcast events on the root scope to notify
+	 *	the implementor that the data submitted is valid.
+	 *
+	 *	#### noSubmit::dataReady
+	 *
+	 *	Raise when the data submmited has passed all validations. Along with the
+	 *	standard event object, the broadcast also sends a reference to the element
+	 *	that has the noSubmit directive attached to it, the scope, and a timestamp.
+	 *
 	 */
 	.directive("noSubmit", ["$injector", "$rootScope", function($injector, $rootScope) {
 		return {
-			restrict: "AC",
+			restrict: "A",
 			require: "?^form",
 			link: function(scope, el, attr, form) {
 				console.info("Linking noSubmit");
@@ -1177,9 +1191,24 @@
 		return directive;
 	}])
 
+	.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser){
+		return {
+			restrict: "A",
+			require: "form",
+			link: function(scope, el, attrs, form){
+				//watch for validation flags and broadcast events down this
+				//directives hierarchy.
+				var wk = form.$name + ".$dirty";
+				console.log(wk, Object.is(form, scope[wk]));
+				scope.$watch(wk, function() {
+					//console.log(wk, arguments);
+					pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});
+				});
+			}
+		};
+	}])
 	;
 })(angular);
-
 //form-config.js
 (function(angular, undefined) {
 	"use strict";
@@ -2030,4 +2059,315 @@
 	angular.module("noinfopath.forms")
 		.service("noFormConfig", ["$q", "$http", "$rootScope", "$state", "noDataSource", "noLocalStorage", "noConfig", NoFormConfigSync]);
 
+})(angular);
+//parameter-parser.js
+(function(angular, undefined){
+	"use strict";
+
+	angular.module("noinfopath.forms")
+		.service("noParameterParser", [function () {
+			this.parse = function (data) {
+				var keys = Object.keys(data).filter(function (v, k) {
+						if(v.indexOf("$") === -1 && v.indexOf(".") === -1) return v;
+					}),
+					values = {};
+				keys.forEach(function (k) {
+					var haveSomething = !!data[k],
+						haveModelValue = haveSomething && data[k].hasOwnProperty("$modelValue");
+
+					if(haveModelValue) {
+						values[k] = data[k].$modelValue;
+					} else if(haveSomething) {
+						values[k] =  data[k];
+					} else {
+						values[k] = "";
+					}
+
+				});
+
+				return values;
+			};
+			this.update = function (src, dest) {
+				var keys = Object.keys(src).filter(function (v, k) {
+					if(v.indexOf("$") === -1) return v;
+				});
+				keys.forEach(function (k) {
+					var d = dest[k];
+					if(d && d.hasOwnProperty("$viewValue")) {
+						d.$setViewValue(src[k]);
+						d.$render();
+						d.$setPristine();
+						d.$setUntouched();
+					} else {
+						dest[k] = src[k];
+					}
+				});
+			};
+		}]);
+})(angular);
+//tabs.js
+(function (angular) {
+	function NoTabsDirective($compile, $state, noFormConfig, noDataSource, noActionQueue, noDataManager, PubSub) {
+		function _resolveOrientation(noTab) {
+			var ul = "nav nav-tabs";
+
+			switch((noTab.orientation || "").toLowerCase()) {
+				case "left":
+					ul = "nav nav-tabs tabs-left col-sm-2";
+					break;
+				case "left-flex":
+					ul = "nav nav-tabs tabs-left";
+					break;
+			}
+			return ul;
+		}
+
+		function _click(ctx, scope, el, e) {
+			e.preventDefault();
+
+			console.log("noTabs ctx.isDirty", ctx.isDirty);
+
+			if(ctx.isDirty) return;
+
+			var ul = el.find("ul").first(),
+				tab = ul.find("li.active"),
+				ndx = tab.attr("ndx"),
+				noid = el.attr("noid"),
+				pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']"),
+				//el.find("no-tab-panel[ndx='" + ndx + "']").first(),
+				tabKey = ctx.component && ctx.component.scopeKey ? ctx.component.scopeKey : "noTabs_" + noid,
+				actions = (ctx.component && ctx.component.actions) || (ctx.widget && ctx.widget.actions),
+				execQueue = actions ? noActionQueue.createQueue(ctx, scope, el, actions) : undefined;
+
+
+			//First deactivate the active tab.
+			tab.removeClass("active");
+			pnl.addClass("ng-hide");
+
+			//Next activate the tab that was clicked.
+			tab = angular.element(e.target).closest("li");
+			ndx = tab.attr("ndx");
+
+			pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']");
+
+			tab.addClass("active");
+			pnl.removeClass("ng-hide");
+
+			if(ctx.noElement) {
+				ctx.noElement.activeTab = Number(ndx);
+				scope.$evalAsync(function() {
+					scope[tabKey] = ndx;
+				});
+				//selectTab(ndx, ctx);
+				// scope[tabKey] = ndx;
+			} else {
+				noInfoPath.setItem(scope, tabKey, {
+					ndx: ndx,
+					btnBar: tab.children("a").attr("btnbar"),
+					title: tab.children("a").text()
+				});
+			}
+
+
+			//$scope.$broadcast("noGrid::refresh", $scope.docGrid ? $scope.docGrid._id : "");
+
+			if(execQueue) {
+				noActionQueue.synchronize(execQueue);
+			}else{
+				//scope.$broadcast("")
+			}
+
+			PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
+		}
+
+		function _static(ctx, scope, el, attrs) {
+			console.log("static");
+			var ul = el.find("ul").first(),
+				lis = ul.length > 0 ? ul.children() : null,
+				pnls = el.find("no-tab-panels").first().children("no-tab-panel"),
+				def = ul.find("li.active"),
+				defNdx;
+
+			pnls.addClass("ng-hide");
+
+			el.find("no-tab-panels").first().addClass("tab-panels");
+
+			el.find("no-tab-panels > no-tab-panel > div")
+				.addClass("no-m-t-lg");
+
+			for(var lii = 0, ndx = 0; lii < lis.length; lii++) {
+				var lie = angular.element(lis[lii]);
+
+				if(!lie.is(".filler-tab")) {
+					lie.attr("ndx", ndx);
+					angular.element(pnls[ndx]).attr("ndx", ndx++);
+				}
+
+			}
+
+			lis.find("a:not(.filler-tab)").click(_click.bind(ctx, ctx, scope, el));
+
+		}
+
+		function _dynamic(ctx, scope, el, attrs) {
+			var dsCfg, ds;
+
+			if(ctx.noid) {
+				dsCfg = ctx.noComponent.noDataSource;
+				ds = noDataSource.create(dsCfg, scope);
+
+				ds.read()
+					.then(function(data) {
+						var tabCfg = ctx.noComponent.noTabs,
+							ul = el.find("ul").first(),
+							pnls = el.find("no-tab-panels").first();
+
+						if(tabCfg.orientation) ul.addClass(_resolveOrientation());
+
+						for(var i = 0; i < data.length; i++) {
+							var li = angular.element("<li></li>"),
+							a = angular.element("<a href=\"\#\"></a>"),
+							datum = data[i];
+							if(i === 0) {
+								li.addClass("active");
+							}
+							li.attr("ndx", datum[tabCfg.valueField]);
+							a.text(datum[tabCfg.textField]);
+
+							li.append(a);
+
+							ul.append(li);
+						}
+
+						ul.find("li > a").click(_click.bind(ctx, ctx, scope, el));
+
+						var tab = el.find("ul").find("li.active");
+						tab.children("a").click();
+
+					});
+
+			} else {
+				// an attempt for complete backwards compatability
+				dsCfg = ctx.resolveDataSource(ctx.component.noDataSource);
+				ds = noDataSource.create(dsCfg, scope);
+
+				noDataManager.cacheRead(dsCfg.name, ds)
+					.then(function (data) {
+						var ul = el.find("ul").first(),
+						pnls = el.find("no-tab-panels").first();
+
+						ul.addClass(_resolveOrientation(ctx.widget));
+
+						el.find("no-tab-panels").first().addClass("tab-panels");
+
+						if(ctx.widget.orientation !== "left-flex") {
+
+							if(ctx.widget.class) {
+								//TODO: Implement class as an object that contains properties for
+								//		the different components of the tabs that are dynamically
+								//		create by the widget.
+							}else{
+								el.find("no-tab-panels").first().addClass("col-sm-10");
+								el.find("no-tab-panels > no-tab-panel > div").addClass("no-m-t-lg");
+							}
+						}
+
+						for(var i = 0, ndx = 0; i < data.length; i++) {
+							var li = angular.element("<li></li>"),
+							a = angular.element("<a href=\"\#\"></a>"),
+							datum = data[i];
+							if(i === 0) {
+								li.addClass("active");
+							}
+							li.attr("ndx", datum[ctx.widget.valueField]);
+							a.text(datum[ctx.widget.textField]);
+
+							li.append(a);
+
+							ul.append(li);
+						}
+
+						ul.find("li > a").click(_click.bind(ctx, ctx, scope, el));
+
+						var tab = el.find("ul").find("li.active");
+						tab.children("a").click();
+						// pnl = el.find("no-tab-panels").first(),
+						// ndx2 = tab.attr("ndx"),
+						// noid = el.attr("noid"),
+						// key = "noTabs_" + noid;
+
+
+					});
+			}
+
+		}
+
+		function _link(ctx, scope, el, attrs) {
+
+			var noForm = ctx.form,
+				noTab = ctx.widget,
+				dynamic = ctx.noElement && !ctx.noElement.tabstrip,
+				pubID;
+
+			//console.log("noTab", "ctx", ctx);
+
+			if(noTab || dynamic) {
+				_dynamic(ctx, scope, el, attrs);
+			} else {
+				_static(ctx, scope, el, attrs);
+				var tab = el.find("ul").find("li.active");
+				// pnl = el.find("no-tab-panels").first(),
+				// ndx2 = tab.attr("ndx"),
+				// noid = el.attr("noid"),
+				// key = "noTabs_" + noid;
+
+
+				tab.children("a").click();
+				// noInfoPath.setItem(scope, key, ndx2);
+				// scope.$root.$broadcast("noTabs::Change", tab, pnl, noTab);
+			}
+
+			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
+				ctx.isDirty = state.isDirty;
+				console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
+			});
+
+			scope.$on("$destroy", function () {
+				console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
+				PubSub.unsubscribe(pubID);
+			});
+
+			// scope.$on("noForm::dirty", function () {
+			// 	var cover = el.find(".no-editor-cover");
+			// 	//console.log("noFormDirty caught.");
+			// 	cover.removeClass("ng-hide");
+			// });
+			//
+			// scope.$on("noForm::clean", function () {
+			// 	var cover = el.find(".no-editor-cover");
+			// 	//console.log("noFormDirty caught.");
+			// 	cover.addClass("ng-hide");
+			//
+			// });
+
+		}
+
+		function _compile(el, attrs) {
+			var ctx = attrs.noForm ? noFormConfig.getComponentContextByRoute($state.current.name, $state.params.entity, "noTabs", attrs.noForm) : {};
+			// if(attrs.noid) {
+			// 	var hashStore = noNCLManager.getHashStore($state.params.fid || $state.current.name.split(".").pop());
+			// 	ctx = hashStore.get(attrs.noid);
+			// }
+
+			return _link.bind(ctx, ctx);
+		}
+
+		return {
+			restrict: "E",
+			compile: _compile
+		};
+	}
+
+	angular.module("noinfopath.ui")
+		.directive("noTabs", ["$compile", "$state", "noFormConfig", "noDataSource", "noActionQueue", "noDataManager", "PubSub", NoTabsDirective]);
 })(angular);

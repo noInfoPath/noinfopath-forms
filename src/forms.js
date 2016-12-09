@@ -42,19 +42,16 @@
 		function _successful(ctx, resolve, newctx, data) {
 			if(newctx.scope.noNavigation) {
 				var navState = newctx.scope.noNavigation[newctx.ctx.component.scopeKey].validationState;
-				navState.form.$setUntouched();
-				navState.form.$setPristine();
-				navState.form.$setSubmitted();
+				if(navState.form.accept) {
+					navState.form.accept(navState.form);
+				} else {
+					navState.form.$setUntouched();
+					navState.form.$setPristine();
+					navState.form.$setSubmitted();
+				}
 			}
-
 			ctx.data = data;
-
-			// if(ctx.form.noReset){
-			// 	data.scope[ctx.form.primaryComponent + "Reset"] = angular.copy(data.scope[ctx.form.primaryComponent]);
-			// }
-
 			noTransactionCache.endTransaction(newctx.trans);
-
 			resolve(ctx);
 		}
 
@@ -488,23 +485,6 @@
 						dest[k] = src[k];
 					}
 				});
-			};
-		}])
-
-		.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser){
-			return {
-				restrict: "A",
-				require: "form",
-				link: function(scope, el, attrs, form){
-					//watch for validation flags and broadcast events down this
-					//directives hierarchy.
-					var wk = form.$name + ".$dirty";
-					console.log(wk, Object.is(form, scope[wk]));
-					scope.$watch(wk, function() {
-						//console.log(wk, arguments);
-						pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});
-					});
-				}
 			};
 		}]);
 

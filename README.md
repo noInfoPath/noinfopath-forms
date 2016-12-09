@@ -1,5 +1,5 @@
 # noinfopath.forms
-@version 1.2.9
+@version 1.2.10
 
 Combines the functionality of validation from bootstrap and angular.
 
@@ -99,6 +99,18 @@ component.
 ## noSubmit
 
 When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+
+### Events
+
+The noSubmit directive will broadcast events on the root scope to notify
+the implementor that the data submitted is valid.
+
+#### noSubmit::dataReady
+
+Raise when the data submmited has passed all validations. Along with the
+standard event object, the broadcast also sends a reference to the element
+that has the noSubmit directive attached to it, the scope, and a timestamp.
+
 
 ## noReset
 

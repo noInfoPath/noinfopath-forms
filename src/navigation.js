@@ -3,6 +3,174 @@
 	"use strict";
 	var stateProvider;
 
+	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers) {
+		var templateFactories = {
+			"button": function (ctx, cfg, scope, el) {
+				var btn = angular.element("<button type=\"button\"></button>"),
+					icon = angular.element("<span></span>");
+				btn.addClass(cfg.class);
+				if(cfg.label) {
+					btn.append(cfg.label);
+				}
+				if(cfg.icon) {
+					icon.addClass(cfg.icon.class);
+					switch(cfg.icon.position) {
+						case "left":
+							btn.prepend(icon);
+							break;
+						default:
+							btn.append(icon);
+							break;
+					}
+				}
+				return btn;
+			},
+			"message": function (ctx, cfg, scope, el) {
+				var div = angular.element("<div></div>");
+				div.html(cfg.template);
+				div.addClass(cfg.class);
+				return div;
+			}
+		};
+		function _click(ctx, btnCfg, scope, el, e) {
+			e.preventDefault();
+			var deferred = $q.defer(),
+				execQueue = noActionQueue.createQueue(ctx, scope, el, btnCfg.actions);
+			delete scope.noNavigationError;
+			return noActionQueue.synchronize(execQueue)
+				.then(function (results) {
+					console.log(results);
+				})
+				.catch(function (err) {
+					scope.noNavigationError = err;
+					throw err;
+				});
+		}
+		function _getCurrentNavBar(navBarName, scope, el) {
+			var nbc = scope.noNavigation[navBarName];
+			if(nbc)
+				return el.find("navbar[bar-id='" + nbc.currentNavBar + "']");
+			else {
+				throw {error: "could not locate navbar on scope.", navBarName: navBarName, scope: scope, el: el};
+			}
+		}
+		function _changeNavBar(ctx, el, n, o, s) {
+			//console.log(ctx, el, n, o, s);
+			if(n) {
+				el.find("navbar").addClass("ng-hide");
+				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
+			}
+		}
+		function _compile(el, attrs) {
+			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
+			//el.attr("noid", noInfoPath.createNoid());
+			return _link.bind(ctx, ctx);
+		}
+		function _link(ctx, scope, el, attrs) {
+			var bars = ctx.component.bars,
+				pubID;
+			el.empty();
+			for(var b in bars) {
+				var bar = bars[b],
+					btnBar = angular.element("<navbar></navbar>");
+				if(angular.isString(bar)){
+					bar = bars[bar];  //Aliased
+				}
+				btnBar.attr("bar-id", b);
+				btnBar.addClass(bar.class);
+				if(b !== ctx.component.default) {
+					btnBar.addClass("ng-hide");
+				}
+				for(var c in bar.components) {
+					var comp = bar.components[c],
+						tmpl = templateFactories[comp.type],
+						btn = tmpl(ctx, comp, scope, el);
+					btn.click(_click.bind(ctx, ctx, comp, scope, el));
+					btnBar.append(btn);
+				}
+				el.append(btnBar);
+			}
+			if(ctx.component.useKendoRowDataUid) {
+				var uid =  noKendoHelpers.getGridRowUID(el).replace(/-/g, "_");
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", ctx.component.default);
+				var unRegWatch = scope.$watch("noNavigation." + ctx.component.scopeKey + "_" + uid + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + "_" + uid + ".deregister", unRegWatch);
+				var target = noKendoHelpers.getGridRow(el).parent()[0];
+				// create an observer instance
+				var observer = new MutationObserver(function(ctx, scope, el, mutations) {
+					for(var m=0; m<mutations.length;m++) {
+						var mutation = mutations[m];
+						for(var n=0; n<mutation.removedNodes.length;n++) {
+							var uid = noInfoPath.toScopeSafeGuid(mutation.removedNodes[n].attributes["data-uid"].value),
+								non = noInfoPath.getItem(scope, "noNavigation"),
+								watch = non[ctx.component.scopeKey + "_" + uid];
+								if(watch && watch.deregister) {
+									watch.deregister();
+									delete non[ctx.component.scopeKey + "_" + uid];
+								}
+						}
+						for(var n1=0; n1<mutation.addedNodes.length;n1++) {
+							var uidN = noInfoPath.toScopeSafeGuid(mutation.addedNodes[n1].attributes["data-uid"].value),
+								nonN = noInfoPath.getItem(scope, "noNavigation");
+							noKendoHelpers.ngCompileSelectedRow(ctx, scope, el, "noGrid");
+						}
+					}
+				}.bind(ctx, ctx, scope, el));
+				// configuration of the observer:
+				var config = { attributes: true, childList: true, characterData: true };
+				// pass in the target node, as well as the observer options
+				observer.observe(target, config);
+				// later, you can stop observing
+				//observer.disconnect();
+			} else {
+				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
+				scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+				pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
+					var cnav = _getCurrentNavBar(navBarName, scope, el),
+						barid = cnav.attr("bar-id").split(".")[0],
+						baridDirty = (barid || "") + ".dirty";
+					console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
+					noNavigationManager.updateValidationState(scope, navBarName, state);
+					if(state.isDirty) {
+							noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
+					}else{
+							noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+					}
+					// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
+					// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+					// }
+				}.bind(ctx, ctx.component.scopeKey));
+			}
+			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
+			//var stopNoNavigationWatch =
+			console.log("pubID", pubID);
+			scope.$on("$destroy", function () {
+				//console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
+				PubSub.unsubscribe(pubID);
+				if(observer) observer.disconnect();
+				//stopNoNavigationWatch();
+			});
+			// scope.$watchCollection(ctx.primary.scopeKey, function (navBarName, e) {
+			// 	var cnav, barid;
+			// 	if(scope[ctx.primary.scopeKey].$dirty) {
+			// 		cnav = _getCurrentNavBar(navBarName, scope, el);
+			// 		barid = cnav.attr("bar-id") + ".dirty";
+			// 		if(!cnav.attr("bar-id").includes(".dirty")) {
+			// 			noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// 		}
+			// 	} else {
+			// 		cnav = _getCurrentNavBar(navBarName, scope, el);
+			// 		barid = cnav.attr("bar-id").replace(/\.dirty/, "");
+			// 		noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+			// 	}
+			// }.bind(ctx, ctx.component.scopeKey));
+		}
+		return {
+			restrict: "E",
+			compile: _compile
+		};
+	}
+
 	angular.module("noinfopath.forms")
 		.config(["$stateProvider", function($stateProvider) {
 			stateProvider = $stateProvider;
@@ -204,155 +372,9 @@
 		};
 	}])
 
-	.directive("noNavigation", ["$injector", "$q", "$state", "$compile", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", function($injector, $q, $state, $compile, noFormConfig, noActionQueue, noNavigationManager, PubSub) {
-		var templateFactories = {
-			"button": function (ctx, cfg, scope, el) {
 
-				var btn = angular.element("<button type=\"button\"></button>"),
-					icon = angular.element("<span></span>");
 
-				btn.addClass(cfg.class);
-
-				if(cfg.label) {
-					btn.append(cfg.label);
-				}
-
-				if(cfg.icon) {
-					icon.addClass(cfg.icon.class);
-					switch(cfg.icon.position) {
-						case "left":
-							btn.prepend(icon);
-							break;
-
-						default:
-							btn.append(icon);
-							break;
-					}
-				}
-
-				return btn;
-			},
-			"message": function (ctx, cfg, scope, el) {
-				var div = angular.element("<div></div>");
-				div.html(cfg.template);
-				div.addClass(cfg.class);
-				return $compile(div)(scope);
-			}
-		};
-
-		function _click(ctx, btnCfg, scope, el, e) {
-			e.preventDefault();
-
-			var deferred = $q.defer(),
-				execQueue = noActionQueue.createQueue(ctx, scope, el, btnCfg.actions);
-
-			return noActionQueue.synchronize(execQueue)
-				.then(function (results) {
-					console.log(results);
-				})
-				.catch(function (err) {
-					console.error(err);
-				});
-
-		}
-
-		function _getCurrentNavBar(navBarName, scope, el) {
-			return el.find("navbar[bar-id='" + scope.noNavigation[navBarName].currentNavBar + "']");
-		}
-
-		function _changeNavBar(ctx, el, n, o, s) {
-			//console.log(ctx, el, n, o, s);
-			if(n !== o) {
-				el.find("navbar").addClass("ng-hide");
-				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
-
-			}
-		}
-
-		function _compile(el, attrs) {
-			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
-			//el.attr("noid", noInfoPath.createNoid());
-			return _link.bind(ctx, ctx);
-		}
-
-		function _link(ctx, scope, el, attrs) {
-			var bars = ctx.component.bars,
-				pubID;
-
-			if(angular.isObject(ctx.component.default)){
-				var prov = $injector.get(ctx.component.default.provider),
-					meth = !!ctx.component.default.method ? prov[ctx.component.default.method] : undefined,
-					prop = !!meth ? meth(ctx.component.default.property) : prov[ctx.component.default.property];
-
-				if(prop){
-					ctx.component.default = ctx.component.default.truthyBar;
-				} else {
-					ctx.component.default = ctx.component.default.falsyBar;
-				}
-			}
-
-			for(var b in bars) {
-				var bar = bars[b],
-					btnBar = angular.element("<navbar></navbar>");
-
-				if(angular.isString(bar)){
-					bar = bars[bar];  //Aliased
-				}
-
-				btnBar.attr("bar-id", b);
-
-				btnBar.addClass(bar.class);
-
-				if(b !== ctx.component.default) {
-					btnBar.addClass("ng-hide");
-				}
-
-				for(var c in bar.components) {
-					var comp = bar.components[c],
-						tmpl = templateFactories[comp.type],
-						btn = tmpl(ctx, comp, scope, el);
-
-					if(comp.type === "button"){
-						btn.click(_click.bind(ctx, ctx, comp, scope, el));
-					}
-
-					btnBar.append(btn);
-				}
-
-				el.append(btnBar);
-			}
-
-			noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
-
-			scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
-
-			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
-				var cnav = _getCurrentNavBar(navBarName, scope, el),
-					barid = cnav.attr("bar-id").split(".")[0],
-					baridDirty = (barid || "") + ".dirty";
-
-				console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
-				noNavigationManager.updateValidationState(scope, navBarName, state);
-
-				if(state.isDirty) {
-						noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
-				}else{
-						noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-				}
-
-			}.bind(ctx, ctx.component.scopeKey));
-
-			scope.$on("$destroy", function () {
-				console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
-				PubSub.unsubscribe(pubID);
-			});
-		}
-
-		return {
-			restrict: "E",
-			compile: _compile
-		};
-	}])
+	.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
 
 	.service("noNavigationOld", ["$q", "$http", "$state", function($q, $http, $state) {
 		this.configure = function() {
