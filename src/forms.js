@@ -372,7 +372,7 @@
 			reject(ctx);
 		}
 
-		function _saveSimple(ctx, scope, el, data, noTrans) {
+		function _upsert(ctx, scope, el, data, noTrans) {
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
 					comp = noForm.noComponents[noForm.primaryComponent],
@@ -408,7 +408,7 @@
 					comp = noForm.noComponents[noForm.primaryComponent],
 					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope);
 
-				return _saveSimple(ctx, scope, el, data, noTrans);
+				return _upsert(ctx, scope, el, data, noTrans);
 		}
 
 		function _undo(ctx, scope, el, dataKey, undoDataKey) {
@@ -446,7 +446,7 @@
 		}
 
 		this.save = _save;
-		this.saveSimple = _saveSimple;
+		this.upsert = _upsert;
 		this.undo = _undo;
 		this.initSession = _initSession;
 		this.beginTransaction = _initSession;
