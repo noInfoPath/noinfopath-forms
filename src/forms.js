@@ -338,7 +338,7 @@
 		};
 	}
 
-	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser) {
+	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser, noDataSource) {
 		function _initSession(ctx, scope) {
 			console.log(ctx);
 		}
@@ -359,7 +359,10 @@
 			}
 
 			ctx.data = data;
-			noTransactionCache.endTransaction(newctx.trans);
+
+			if(newctx.trans){
+				noTransactionCache.endTransaction(newctx.trans);
+			}
 
 			resolve(ctx);
 		}
@@ -369,12 +372,11 @@
 			reject(ctx);
 		}
 
-		function _save(ctx, scope, el, data) {
-
+		function _saveSimple(ctx, scope, el, data, noTrans) {
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
 					comp = noForm.noComponents[noForm.primaryComponent],
-					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
+					ds = noDataSource.create(comp.noDataSource, scope),
 					newctx = {
 						ctx: ctx,
 						comp: comp,
@@ -382,15 +384,31 @@
 						scope: scope
 					};
 
-				if(data.$valid) {
-					noTrans.upsert(data)
-						.then(_successful.bind(null, ctx, resolve, newctx))
-						.catch(_fault.bind(null, ctx, reject, newctx));
-				} else {
-					scope.$broadcast("no::validate");
-					reject("Form is invalid.");
-				}
+					if(data.$valid) {
+						var saveData = noParameterParser.parse(data);
+
+						if(saveData[comp.noDataSource.primaryKey]){
+							ds.update(saveData, noTrans)
+								.then(_successful.bind(null, ctx, resolve, newctx))
+								.catch(_fault.bind(null, ctx, reject, newctx));
+						} else {
+							ds.create(saveData, noTrans)
+								.then(_successful.bind(null, ctx, resolve, newctx))
+								.catch(_fault.bind(null, ctx, reject, newctx));
+						}
+					} else {
+						scope.$broadcast("no::validate");
+						reject("Form is invalid.");
+					}
 			});
+		}
+
+		function _save(ctx, scope, el, data) {
+				var noForm = ctx.form,
+					comp = noForm.noComponents[noForm.primaryComponent],
+					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope);
+
+				return _saveSimple(ctx, scope, el, data, noTrans);
 		}
 
 		function _undo(ctx, scope, el, dataKey, undoDataKey) {
@@ -428,6 +446,7 @@
 		}
 
 		this.save = _save;
+		this.saveSimple = _saveSimple;
 		this.undo = _undo;
 		this.initSession = _initSession;
 		this.beginTransaction = _initSession;
@@ -475,6 +494,6 @@
 
 	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", NoDataManagerService]);
+	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", NoDataManagerService]);
 
 })(angular);
