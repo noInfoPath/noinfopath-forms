@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.14
+ * @version 2.0.15
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -379,6 +379,10 @@
 				noTransactionCache.endTransaction(newctx.trans);
 			}
 
+			if(newctx && newctx.comp.scopeKey) {
+				noInfoPath.setItem(newctx.scope, newctx.comp.scopeKey, data[newctx.comp.scopeKey] || data);
+			}
+
 			resolve(ctx);
 		}
 
@@ -387,17 +391,11 @@
 			reject(ctx);
 		}
 
-		function _upsert(ctx, scope, el, data, noTrans) {
+		function _upsert(ctx, scope, el, data, noTrans, newctx) {
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
 					comp = noForm.noComponents[noForm.primaryComponent],
-					ds = noDataSource.create(comp.noDataSource, scope),
-					newctx = {
-						ctx: ctx,
-						comp: comp,
-						trans: noTrans,
-						scope: scope
-					};
+					ds = noDataSource.create(comp.noDataSource, scope);
 
 					if(data.$valid) {
 						var saveData = noParameterParser.parse(data);
@@ -421,9 +419,19 @@
 		function _save(ctx, scope, el, data) {
 				var noForm = ctx.form,
 					comp = noForm.noComponents[noForm.primaryComponent],
-					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope);
+					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
+					newctx = {
+						ctx: ctx,
+						comp: comp,
+						trans: noTrans,
+						scope: scope
+					};
 
-				return _upsert(ctx, scope, el, data, noTrans);
+				return $q(function(resolve, reject){
+					comp.noDataSource.noTransaction ? noTrans.upsert(data).then(_successful.bind(null, ctx, resolve, newctx)).catch(_fault.bind(null, ctx, reject, newctx)): _upsert(ctx, scope, el, data, noTrans, newctx);
+				});
+
+
 		}
 
 		function _undo(ctx, scope, el, dataKey, undoDataKey) {
