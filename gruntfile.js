@@ -14,8 +14,7 @@ module.exports = function(grunt) {
 					'src/tabs.js',
 					'src/navigation.js',
 					'src/validation.js',
-					'src/form-config.js',
-					'src/parameter-parser.js'
+					'src/form-config.js'
 				],
 				dest: 'dist/noinfopath-forms.js'
 			},
