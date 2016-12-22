@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 1.2.10
+ * @version 1.2.11
  *
  * Combines the functionality of validation from bootstrap and angular.
  *
