@@ -232,7 +232,7 @@
 				//watch for validation flags and broadcast events down this
 				//directives hierarchy.
 				var wk = form.$name + ".$dirty";
-				console.log(wk, Object.is(form, scope[wk]));
+				console.log("noValidation", wk, form, scope[wk], Object.is(form, scope[wk]));
 				scope.$watch(wk, function() {
 					//console.log(wk, arguments);
 					pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});

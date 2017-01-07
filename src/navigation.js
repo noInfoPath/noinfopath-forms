@@ -1,7 +1,36 @@
 //navigation.js
 (function (angular, undefined) {
 	"use strict";
-
+	/*
+	*	## noNavigation Directive
+	*
+	*	##### Sample navbar configuration
+	*
+	*	```json
+	*	"quantities": {
+	*		"ngShow": "!project.$dirty",
+	*		"class": "no-flex justify-left no-flex-item size-1",
+	*		"components": [
+	*			{
+	*				"type": "button",
+	*				"actions": [{
+	*					"provider": "$state",
+	*					"method": "go",
+	*					"params": ["efr.client.search"],
+	*					"noContextParams": true
+	*				}],
+	*				"class": "btn btn-default no-flex-item",
+	*				"icon": {
+	*					"class": "glyphicon glyphicon-arrow-left no-text"
+	*				}
+	*			}
+	*		]
+	*	}
+	*	```
+	*
+	*	When a bar configuration is a string then it is an alias
+	*	or a reference to another bar configuration.
+	*/
 	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers) {
 		var templateFactories = {
 			"button": function (ctx, cfg, scope, el) {
@@ -28,7 +57,7 @@
 					}
 				}
 
-				btn.click(_click.bind(ctx, ctx, comp, scope, el));
+				btn.click(_click.bind(ctx, ctx, cfg, scope, el));
 
 				return btn;
 			},
@@ -96,6 +125,8 @@
 				var unRegWatch = scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
 
 				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
+			} else {
+				scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
 			}
 
 		}
@@ -121,34 +152,7 @@
 			for(var b in bars) {
 				var bar = bars[b],
 					btnBar = angular.element("<navbar></navbar>");
-				/*
-				*	##### Sample navbar configuration
-				*
-				*	```json
-				*	"quantities": {
-				*		"ngShow": "!project.$dirty",
-				*		"class": "no-flex justify-left no-flex-item size-1",
-				*		"components": [
-				*			{
-				*				"type": "button",
-				*				"actions": [{
-				*					"provider": "$state",
-				*					"method": "go",
-				*					"params": ["efr.client.search"],
-				*					"noContextParams": true
-				*				}],
-				*				"class": "btn btn-default no-flex-item",
-				*				"icon": {
-				*					"class": "glyphicon glyphicon-arrow-left no-text"
-				*				}
-				*			}
-				*		]
-				*	}
-				*	```
-				*
-				*	When a bar configuration is a string then it is an alias
-				*	or a reference to another bar configuration.
-				*/
+
 				if(angular.isString(bar)){
 					bar = bars[bar];  //Aliased
 				}
@@ -282,11 +286,14 @@
 				// pass in the target node, as well as the observer options
 				observer.observe(target, config);
 
-				// later, you can stop observing
-				//observer.disconnect();
 			} else {
-				noInfoPath.setItem(scope, "noNavigation." + ctx.component.scopeKey + ".currentNavBar", ctx.component.default);
-				scope.$watch("noNavigation." + ctx.component.scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
+				_registerWatch(ctx, scope, el);
+
+				/*
+				*	When a KendoUI Grid is not involved, the noNavigation directive instead
+				*	subscribes to the `no-validation::dirty-state-changed` event published by
+				*	the noValidation directive.
+				*/
 				pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
 					var cnav = _getCurrentNavBar(navBarName, scope, el),
 						barid = cnav.attr("bar-id").split(".")[0],
@@ -307,13 +314,8 @@
 				}.bind(ctx, ctx.component.scopeKey));
 			}
 
-			//noActionQueue.configureWatches(ctx, scope, el, ctx.navigation.watches);
-			//var stopNoNavigationWatch =
 
-
-
-
-			console.log("pubID", pubID);
+			//console.log("pubID", pubID);
 			scope.$on("$destroy", function () {
 				//console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
 				PubSub.unsubscribe(pubID);

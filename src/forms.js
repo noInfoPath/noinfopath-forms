@@ -344,6 +344,21 @@
 		}
 
 		function _successful(ctx, resolve, newctx, data) {
+
+
+			ctx.data = data;
+
+			if(newctx.trans){
+				noTransactionCache.endTransaction(newctx.trans);
+			}
+
+			if(newctx && newctx.comp.scopeKey) {
+				var curData = noInfoPath.getItem(newctx.scope, newctx.comp.scopeKey);
+
+				noParameterParser.update(data[newctx.comp.scopeKey] || data, curData);
+				//noInfoPath.setItem(newctx.scope, newctx.comp.scopeKey, data[newctx.comp.scopeKey] || data);
+			}
+
 			if(newctx.scope.noNavigation) {
 				var navState = newctx.scope.noNavigation[newctx.ctx.component.scopeKey].validationState;
 
@@ -356,16 +371,6 @@
 					navState.form.$setPristine();
 					navState.form.$setSubmitted();
 				}
-			}
-
-			ctx.data = data;
-
-			if(newctx.trans){
-				noTransactionCache.endTransaction(newctx.trans);
-			}
-
-			if(newctx && newctx.comp.scopeKey) {
-				noInfoPath.setItem(newctx.scope, newctx.comp.scopeKey, data[newctx.comp.scopeKey] || data);
 			}
 
 			resolve(ctx);
