@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.16
+ * @version 2.0.17
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -428,7 +428,12 @@
 					};
 
 				return $q(function(resolve, reject){
-					comp.noDataSource.noTransaction ? noTrans.upsert(data).then(_successful.bind(null, ctx, resolve, newctx)).catch(_fault.bind(null, ctx, reject, newctx)): _upsert(ctx, scope, el, data, noTrans, newctx);
+					if(data.$valid) {
+						comp.noDataSource.noTransaction ? noTrans.upsert(data).then(_successful.bind(null, ctx, resolve, newctx)).catch(_fault.bind(null, ctx, reject, newctx)): _upsert(ctx, scope, el, data, noTrans, newctx);
+					} else {
+						scope.$broadcast("no::validate");
+						reject("Form is invalid.");
+					}
 				});
 
 
