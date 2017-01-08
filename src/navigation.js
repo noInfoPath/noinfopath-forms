@@ -299,7 +299,7 @@
 						barid = cnav.attr("bar-id").split(".")[0],
 						baridDirty = (barid || "") + ".dirty";
 
-					console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
+					//console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
 					noNavigationManager.updateValidationState(scope, navBarName, state);
 
 					if(state.isDirty) {

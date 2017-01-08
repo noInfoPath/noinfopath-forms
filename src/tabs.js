@@ -18,7 +18,7 @@
 		function _click(ctx, scope, el, e) {
 			e.preventDefault();
 
-			console.log("noTabs ctx.isDirty", ctx.isDirty);
+			//console.log("noTabs ctx.isDirty", ctx.isDirty);
 
 			if(ctx.isDirty) return;
 
@@ -74,7 +74,7 @@
 		}
 
 		function _static(ctx, scope, el, attrs) {
-			console.log("static");
+			//console.log("static");
 			var ul = el.find("ul").first(),
 				lis = ul.length > 0 ? ul.children() : null,
 				pnls = el.find("no-tab-panels").first().children("no-tab-panel"),
@@ -222,11 +222,11 @@
 
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
 				ctx.isDirty = state.isDirty;
-				console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
+				if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
 			});
 
 			scope.$on("$destroy", function () {
-				console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
+				//console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
 				PubSub.unsubscribe(pubID);
 			});
 

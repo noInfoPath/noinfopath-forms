@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.18
+ * @version 2.0.19
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -612,7 +612,7 @@
 		function _click(ctx, scope, el, e) {
 			e.preventDefault();
 
-			console.log("noTabs ctx.isDirty", ctx.isDirty);
+			//console.log("noTabs ctx.isDirty", ctx.isDirty);
 
 			if(ctx.isDirty) return;
 
@@ -668,7 +668,7 @@
 		}
 
 		function _static(ctx, scope, el, attrs) {
-			console.log("static");
+			//console.log("static");
 			var ul = el.find("ul").first(),
 				lis = ul.length > 0 ? ul.children() : null,
 				pnls = el.find("no-tab-panels").first().children("no-tab-panel"),
@@ -816,11 +816,11 @@
 
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
 				ctx.isDirty = state.isDirty;
-				console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
+				if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
 			});
 
 			scope.$on("$destroy", function () {
-				console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
+				//console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
 				PubSub.unsubscribe(pubID);
 			});
 
@@ -1160,7 +1160,7 @@
 						barid = cnav.attr("bar-id").split(".")[0],
 						baridDirty = (barid || "") + ".dirty";
 
-					console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
+					//console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
 					noNavigationManager.updateValidationState(scope, navBarName, state);
 
 					if(state.isDirty) {
@@ -1498,7 +1498,7 @@
 		if (!field) return;
 
 		var t = el.find(".k-editor"),
-			h = el.find(".help-block");
+		h = el.find(".help-block");
 
 		h.toggleClass("ng-hide", field.$valid || field.$pristine);
 		if (t.length > 0) {
@@ -1525,14 +1525,14 @@
 
 
 	function _blur(el, field) {
-		if(field && !field.$pristine) _validate(el, field);
+		if (field && !field.$pristine) _validate(el, field);
 	}
 
 	/*
-		### NoFormValidate
+	### NoFormValidate
 
-		This class exists because of a bug with nested custom directives and
-		my apparent misunderstanding of how directives actaull work.  :(
+	This class exists because of a bug with nested custom directives and
+	my apparent misunderstanding of how directives actaull work.  :(
 	*/
 	function NoFormValidate(el) {
 		Object.defineProperties(this, {
@@ -1560,81 +1560,98 @@
 	}
 
 	angular.module("noinfopath.forms")
-		/**
-		 * ## noErrors
-		 *
-		 * The noErrors directive provides the container for applying the
-		 * BootStrap validation CSS, in response to AngularJS validation
-		 * attributes. The directive works in conjunction with with the noSubmit
-		 * and noReset directive.
-		 *
-		 * It also provides compatibliy with Kendo UI controls and no-file-upload
-		 * component.
-		 *
-		 */
-		.directive('noErrors', [function() {
-			return {
-				restrict: 'A',
-				require: '?^^form',
-				compile: function(el, attrs) {
-					var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop]");
-					i.attr("name", i.attr("ng-model"));
+	/**
+	* ## noErrors
+	*
+	* The noErrors directive provides the container for applying the
+	* BootStrap validation CSS, in response to AngularJS validation
+	* attributes. The directive works in conjunction with with the noSubmit
+	* and noReset directive.
+	*
+	* It also provides compatibliy with Kendo UI controls and no-file-upload
+	* component.
+	*
+	*/
+	.directive('noErrors', [function() {
+		return {
+			restrict: 'A',
+			require: '?^^form',
+			compile: function(el, attrs) {
 
-					return function(scope, el, attrs, form) {
-						var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop]"),
-							fld,
-							lbl;
+				var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop], no-lookup, no-kendo-date-picker, no-file-upload");
 
-						if (!form) {
-							form = new NoFormValidate(el);
-						}
+				return function(i, scope, el, attrs, form) {
+					var fld,
+					lbl,
+					ctl,
+					tag = i[0].tagName.toLowerCase();
 
-						fld = form[i.attr("name")];
+					if (!form) {
+						form = new NoFormValidate(el);
+					}
 
-						if (i.attr("type") === "hidden") {
-							lbl = el.find("SPAN[required]");
-						}
+					fld = form[i.attr("name")];
 
-						scope.$on('no::validate', _validate.bind(null, el, fld, lbl));
-						scope.$on('no::validate:reset', _resetErrors.bind(null, el, fld, lbl));
-						i.bind('blur', _blur.bind(null, el, fld, lbl));
-					};
-				}
-			};
-		}])
+					if (i.attr("type") === "hidden") {
+						lbl = el.find("SPAN[required]");
+					}
+
+
+					switch (tag) {
+						case "no-lookup":
+						case "no-kendo-date-picker":
+							ctl = i.children(":first");
+							ctl.bind('change', _blur.bind(null, el, fld, lbl));
+							break;
+
+						default:
+							ctl = i;
+							break;
+					}
+
+					ctl.bind('blur', _blur.bind(null, el, fld, lbl));
+
+					scope.$on('no::validate', _validate.bind(null, el, fld, lbl));
+					scope.$on('no::validate:reset', _resetErrors.bind(null, el, fld, lbl));
+
+
+				}.bind(this, i);
+			}
+		};
+	}])
 
 	/**
-	 * ## noSubmit
-	 *
-	 * When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
-	 *
-	 *	### Events
-	 *
-	 *	The noSubmit directive will broadcast events on the root scope to notify
-	 *	the implementor that the data submitted is valid.
-	 *
-	 *	#### noSubmit::dataReady
-	 *
-	 *	Raise when the data submmited has passed all validations. Along with the
-	 *	standard event object, the broadcast also sends a reference to the element
-	 *	that has the noSubmit directive attached to it, the scope, and a timestamp.
-	 *
-	 */
+	* ## noSubmit
+	*
+	* When user clicks submit, checks to make sure the data is appropriate and returns an error if not.
+	*
+	*	### Events
+	*
+	*	The noSubmit directive will broadcast events on the root scope to notify
+	*	the implementor that the data submitted is valid.
+	*
+	*	#### noSubmit::dataReady
+	*
+	*	Raise when the data submmited has passed all validations. Along with the
+	*	standard event object, the broadcast also sends a reference to the element
+	*	that has the noSubmit directive attached to it, the scope, and a timestamp.
+	*
+	*/
 	.directive("noSubmit", ["$injector", "$rootScope", function($injector, $rootScope) {
 		return {
 			restrict: "A",
 			require: "?^form",
 			link: function(scope, el, attr, form) {
-				console.info("Linking noSubmit");
+				//console.info("Linking noSubmit");
 				if (!form) {
 					form = new NoFormValidate(el);
 				}
 
 				function _submit(form, e) {
 					e.preventDefault();
-					if(attr.noValidate){
+					if (attr.noValidate) {
 						$rootScope.$broadcast("noSubmit::dataReady", el, scope, new Date());
-					}else{
+					} else {
 						if (form.$valid) {
 							$rootScope.$broadcast("noSubmit::dataReady", el, scope, new Date());
 						} else {
@@ -1651,10 +1668,10 @@
 	}])
 
 	/**
-	 * ## noReset
-	 *
-	 * When user clicks reset, form is reset to null state.
-	 */
+	* ## noReset
+	*
+	* When user clicks reset, form is reset to null state.
+	*/
 	.directive("noReset", ["$rootScope", function($rootScope) {
 		return {
 			restrict: "A",
@@ -1662,7 +1679,7 @@
 			scope: false,
 			link: function(scope, el, attr, ctrl) {
 				var rsetKey = "noReset_" + attr.noReset,
-					stopWatch;
+				stopWatch;
 
 				stopWatch = scope.$watch(attr.noReset, function(n, o, s) {
 					if (n) {
@@ -1704,7 +1721,7 @@
 		}
 
 		function _link(scope, el, attr) {
-			console.warn("This will be refactored into a different module in a future release");
+			//console.warn("This will be refactored into a different module in a future release");
 			_enterPressed(el, scope);
 		}
 
@@ -1716,23 +1733,26 @@
 		return directive;
 	}])
 
-	.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser){
+	.directive("noValidation", ["PubSub", "noParameterParser", function(pubsub, noParameterParser) {
 		return {
 			restrict: "A",
 			require: "form",
-			link: function(scope, el, attrs, form){
+			link: function(scope, el, attrs, form) {
 				//watch for validation flags and broadcast events down this
 				//directives hierarchy.
 				var wk = form.$name + ".$dirty";
-				console.log("noValidation", wk, form, scope[wk], Object.is(form, scope[wk]));
+				//console.log("noValidation", wk, form, scope[wk], Object.is(form, scope[wk]));
 				scope.$watch(wk, function() {
-					//console.log(wk, arguments);
-					pubsub.publish("no-validation::dirty-state-changed", {isDirty: form.$dirty, pure: noParameterParser.parse(form), form: form});
-				});
+					console.log("noValidation", this.$name, "isDirty", this.$dirty);
+					pubsub.publish("no-validation::dirty-state-changed", {
+						isDirty: form.$dirty,
+						pure: noParameterParser.parse(form),
+						form: form
+					});
+				}.bind(form));
 			}
 		};
-	}])
-	;
+	}]);
 })(angular);
 
 //form-config.js
