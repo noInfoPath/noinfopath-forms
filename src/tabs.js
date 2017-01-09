@@ -65,12 +65,14 @@
 			//$scope.$broadcast("noGrid::refresh", $scope.docGrid ? $scope.docGrid._id : "");
 
 			if(execQueue) {
-				noActionQueue.synchronize(execQueue);
+				noActionQueue.synchronize(execQueue)
+					.then(PubSub.publish.bind(PubSub, "noTabs::change", {tabKey: tabKey, tabIndex: ndx}));
 			}else{
 				//scope.$broadcast("")
+				PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
 			}
 
-			PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
+
 		}
 
 		function _static(ctx, scope, el, attrs) {
@@ -113,19 +115,31 @@
 					.then(function(data) {
 						var tabCfg = ctx.noComponent.noTabs,
 							ul = el.find("ul").first(),
-							pnls = el.find("no-tab-panels").first();
+							pnls = el.find("no-tab-panels").first(),
+							defaultTab;
+
 
 						if(tabCfg.orientation) ul.addClass(_resolveOrientation());
 
 						for(var i = 0; i < data.length; i++) {
 							var li = angular.element("<li></li>"),
-							a = angular.element("<a href=\"\#\"></a>"),
-							datum = data[i];
+								a = angular.element("<a href=\"\#\"></a>"),
+								datum = data[i],
+								ndx = datum[tabCfg.valueField],
+								txt = datum[tabCfg.textField];
+
 							if(i === 0) {
 								li.addClass("active");
+								// noInfoPath.setItem(scope, tabKey, {
+								// 	ndx: ndx,
+								// 	btnBar: tab.children("a").attr("btnbar"),
+								// 	title: txt
+								// });
+								defaultTab = a;
 							}
-							li.attr("ndx", datum[tabCfg.valueField]);
-							a.text(datum[tabCfg.textField]);
+
+							li.attr("ndx", ndx);
+							a.text(txt);
 
 							li.append(a);
 
@@ -146,8 +160,9 @@
 
 				noDataManager.cacheRead(dsCfg.name, ds)
 					.then(function (data) {
-						var ul = el.find("ul").first(),
-						pnls = el.find("no-tab-panels").first();
+						var tabCfg = ctx.component.noTabs,
+							ul = el.find("ul").first(),
+							pnls = el.find("no-tab-panels").first();
 
 						ul.addClass(_resolveOrientation(ctx.widget));
 
@@ -167,13 +182,17 @@
 
 						for(var i = 0, ndx = 0; i < data.length; i++) {
 							var li = angular.element("<li></li>"),
-							a = angular.element("<a href=\"\#\"></a>"),
-							datum = data[i];
+								a = angular.element("<a href=\"\#\"></a>"),
+								datum = data[i],
+								ndx = datum[tabCfg.valueField],
+								txt = datum[tabCfg.textField];
+
 							if(i === 0) {
 								li.addClass("active");
+								defaultTab = a;
 							}
-							li.attr("ndx", datum[ctx.widget.valueField]);
-							a.text(datum[ctx.widget.textField]);
+							li.attr("ndx", ndx);
+							a.text(txt);
 
 							li.append(a);
 
@@ -184,6 +203,7 @@
 
 						var tab = el.find("ul").find("li.active");
 						tab.children("a").click();
+
 						// pnl = el.find("no-tab-panels").first(),
 						// ndx2 = tab.attr("ndx"),
 						// noid = el.attr("noid"),
