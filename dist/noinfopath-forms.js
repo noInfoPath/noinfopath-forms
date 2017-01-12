@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.19
+ * @version 2.0.20
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -659,12 +659,14 @@
 			//$scope.$broadcast("noGrid::refresh", $scope.docGrid ? $scope.docGrid._id : "");
 
 			if(execQueue) {
-				noActionQueue.synchronize(execQueue);
+				noActionQueue.synchronize(execQueue)
+					.then(PubSub.publish.bind(PubSub, "noTabs::change", {tabKey: tabKey, tabIndex: ndx}));
 			}else{
 				//scope.$broadcast("")
+				PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
 			}
 
-			PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
+
 		}
 
 		function _static(ctx, scope, el, attrs) {
@@ -707,19 +709,31 @@
 					.then(function(data) {
 						var tabCfg = ctx.noComponent.noTabs,
 							ul = el.find("ul").first(),
-							pnls = el.find("no-tab-panels").first();
+							pnls = el.find("no-tab-panels").first(),
+							defaultTab;
+
 
 						if(tabCfg.orientation) ul.addClass(_resolveOrientation());
 
 						for(var i = 0; i < data.length; i++) {
 							var li = angular.element("<li></li>"),
-							a = angular.element("<a href=\"\#\"></a>"),
-							datum = data[i];
+								a = angular.element("<a href=\"\#\"></a>"),
+								datum = data[i],
+								ndx = datum[tabCfg.valueField],
+								txt = datum[tabCfg.textField];
+
 							if(i === 0) {
 								li.addClass("active");
+								// noInfoPath.setItem(scope, tabKey, {
+								// 	ndx: ndx,
+								// 	btnBar: tab.children("a").attr("btnbar"),
+								// 	title: txt
+								// });
+								defaultTab = a;
 							}
-							li.attr("ndx", datum[tabCfg.valueField]);
-							a.text(datum[tabCfg.textField]);
+
+							li.attr("ndx", ndx);
+							a.text(txt);
 
 							li.append(a);
 
@@ -740,8 +754,9 @@
 
 				noDataManager.cacheRead(dsCfg.name, ds)
 					.then(function (data) {
-						var ul = el.find("ul").first(),
-						pnls = el.find("no-tab-panels").first();
+						var tabCfg = ctx.component.noTabs,
+							ul = el.find("ul").first(),
+							pnls = el.find("no-tab-panels").first();
 
 						ul.addClass(_resolveOrientation(ctx.widget));
 
@@ -761,13 +776,17 @@
 
 						for(var i = 0, ndx = 0; i < data.length; i++) {
 							var li = angular.element("<li></li>"),
-							a = angular.element("<a href=\"\#\"></a>"),
-							datum = data[i];
+								a = angular.element("<a href=\"\#\"></a>"),
+								datum = data[i],
+								ndx = datum[tabCfg.valueField],
+								txt = datum[tabCfg.textField];
+
 							if(i === 0) {
 								li.addClass("active");
+								defaultTab = a;
 							}
-							li.attr("ndx", datum[ctx.widget.valueField]);
-							a.text(datum[ctx.widget.textField]);
+							li.attr("ndx", ndx);
+							a.text(txt);
 
 							li.append(a);
 
@@ -778,6 +797,7 @@
 
 						var tab = el.find("ul").find("li.active");
 						tab.children("a").click();
+
 						// pnl = el.find("no-tab-panels").first(),
 						// ndx2 = tab.attr("ndx"),
 						// noid = el.attr("noid"),
@@ -940,7 +960,7 @@
 
 			return noActionQueue.synchronize(execQueue)
 				.then(function (results) {
-					console.log(results);
+					return results;
 				})
 				.catch(function (err) {
 					scope.noNavigationError = err;
@@ -952,9 +972,11 @@
 		function _getCurrentNavBar(navBarName, scope, el) {
 			var nbc = scope.noNavigation[navBarName];
 
-			if(nbc)
-				return el.find("navbar[bar-id='" + nbc.currentNavBar + "']");
-			else {
+			if(nbc) {
+				var nbe = el.find("navbar[bar-id='" + nbc.currentNavBar + "']");
+				//if(nbe.length === 0) console.log("_getCurrentNavBar", navBarName,  el.parent().parent().html());
+				return nbe;
+			} else {
 				throw {error: "could not locate navbar on scope.", navBarName: navBarName, scope: scope, el: el};
 			}
 		}
@@ -987,7 +1009,7 @@
 
 				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
 			} else {
-				scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
+				//scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noNavigationManager.changeNavBar.bind(ctx, ctx, scope, el, ctx.component.scopeKey));
 			}
 
 		}
@@ -1087,9 +1109,9 @@
 				*	> Because AngularJS scopeKey don't like hyphens in their names,
 				*	> they are replaced with underscores.
 				*/
-				var uid =  noKendoHelpers.getGridRowUID(el).replace(/-/g, "_");
+				var uid = noInfoPath.toScopeSafeGuid(noKendoHelpers.getGridRowUID(el));
 
-				_registerWatch(ctx, scope, el, uid);
+				//_registerWatch(ctx, scope, el, uid);
 
 				/*
 				*	Due to the specific behavior of KendoUI Grid, and inline row editing,
@@ -1101,78 +1123,88 @@
 				*	a callback method that will provide an array of mutations. Each
 				*	mutation has a list of removed nodes and a list of added nodes.
 				*/
-				var target = noKendoHelpers.getGridRow(el).parent()[0];
-
-				// create an observer instance
-				var observer = new MutationObserver(function(ctx, scope, el, mutations) {
-					for(var m=0; m<mutations.length;m++) {
-						var mutation = mutations[m];
-
-						/*
-						*	Each removed node is retrieved from the noNavigation scope object
-						*	and if it has a `deregister` method, it is called and then
-						*	navbar that identifies with the remove node is deleted from
-						*	the scope object.
-						*/
-						for(var n=0; n<mutation.removedNodes.length;n++) {
-							var uid = noInfoPath.toScopeSafeGuid(mutation.removedNodes[n].attributes["data-uid"].value),
-								non = noInfoPath.getItem(scope, "noNavigation"),
-								watch = non[ctx.component.scopeKey + "_" + uid];
-
-								if(watch && watch.deregister) {
-									watch.deregister();
-
-									delete non[ctx.component.scopeKey + "_" + uid];
-								}
-						}
-
-						/*
-						*	Each node added to the grid is recompiled using `$compile` via
-						*	the `noKendoHelpers.ngCompileSelectedRow` method. Then the
-						*	watch is established for the new row.
-						*/
-						for(var n1=0; n1<mutation.addedNodes.length;n1++) {
-							var uidN = noInfoPath.toScopeSafeGuid(mutation.addedNodes[n1].attributes["data-uid"].value);
-
-							noKendoHelpers.ngCompileSelectedRow(ctx, scope, el, "noGrid");
-
-							_registerWatch(ctx, scope, el, uidN);
-						}
-					}
-				}.bind(ctx, ctx, scope, el));
-
-				// configuration of the observer:
-				var config = { attributes: true, childList: true, characterData: true };
-
-				// pass in the target node, as well as the observer options
-				observer.observe(target, config);
+				// var target = noKendoHelpers.getGridRow(el).parent()[0];
+				//
+				// // create an observer instance
+				// var observer = new MutationObserver(function(ctx, scope, el, mutations) {
+				// 	for(var m=0; m<mutations.length;m++) {
+				// 		var mutation = mutations[m];
+				//
+				// 		/*
+				// 		*	Each removed node is retrieved from the noNavigation scope object
+				// 		*	and if it has a `deregister` method, it is called and then
+				// 		*	navbar that identifies with the remove node is deleted from
+				// 		*	the scope object.
+				// 		*/
+				// 		for(var n=0; n<mutation.removedNodes.length;n++) {
+				// 			var uid = noInfoPath.toScopeSafeGuid(noKendoHelpers.getGridRowUID(mutation.removedNodes[n])),
+				// 				non = noInfoPath.getItem(scope, "noNavigation"),
+				// 				watch = non[ctx.component.scopeKey + "_" + uid];
+				//
+				// 				if(watch && watch.deregister) {
+				// 					watch.deregister();
+				//
+				// 					delete non[ctx.component.scopeKey + "_" + uid];
+				// 				}
+				// 		}
+				//
+				// 		/*
+				// 		*	Each node added to the grid is recompiled using `$compile` via
+				// 		*	the `noKendoHelpers.ngCompileSelectedRow` method.
+				// 		*/
+				// 		for(var n1=0; n1<mutation.addedNodes.length;n1++) {
+				// 			var uid = noInfoPath.toScopeSafeGuid(noKendoHelpers.getGridRowUID(mutation.addedNodes[n1]));
+				//
+				// 			noKendoHelpers.ngCompileSelectedRow(ctx, scope, el, "noGrid");
+				//
+				// 			_registerWatch(ctx, scope, el, uid);
+				// 		}
+				// 	}
+				// }.bind(ctx, ctx, scope, el));
+				//
+				// // configuration of the observer:
+				// var config = { attributes: true, childList: true, characterData: true };
+				//
+				// // pass in the target node, as well as the observer options
+				// observer.observe(target, config);
 
 			} else {
 				_registerWatch(ctx, scope, el);
 
-				/*
-				*	When a KendoUI Grid is not involved, the noNavigation directive instead
-				*	subscribes to the `no-validation::dirty-state-changed` event published by
-				*	the noValidation directive.
-				*/
-				pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
-					var cnav = _getCurrentNavBar(navBarName, scope, el),
-						barid = cnav.attr("bar-id").split(".")[0],
-						baridDirty = (barid || "") + ".dirty";
+				if(!scope.noNavigation) scope.noNavigation = {};
 
-					//console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
-					noNavigationManager.updateValidationState(scope, navBarName, state);
+				if(!scope.noNavigation[ctx.component.scopeKey]) scope.noNavigation[ctx.component.scopeKey] = {};
 
-					if(state.isDirty) {
+				scope.$on("noAreaLoader::areaReady", function(ctx){
+					/*
+					*	When a KendoUI Grid is not involved, the noNavigation directive instead
+					*	subscribes to the `no-validation::dirty-state-changed` event published by
+					*	the noValidation directive.
+					*/
+					pubID = PubSub.subscribe("no-validation::dirty-state-changed", function (navBarName, state) {
+						var cnav = _getCurrentNavBar(navBarName, scope, el),
+							barid = cnav.attr("bar-id") ? cnav.attr("bar-id").split(".")[0] : undefined,
+							baridDirty = (barid || "") + ".dirty";
+
+						//console.log("no-validation::dirty-state-changed", "isDirty", state.isDirty, barid, baridDirty);
+						noNavigationManager.updateValidationState(scope, navBarName, state);
+
+						if(state.isDirty) {
+							//scope.noNavigation[navBarName].currentNavBar = baridDirty;
 							noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
-					}else{
+							_changeNavBar(this, el, baridDirty, baridDirty, scope);
+						}else{
+							//scope.noNavigation[navBarName].currentNavBar = barid;
 							noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-					}
+							_changeNavBar(this, el, barid, barid, scope);
+						}
 
-					// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
-					// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-					// }
-				}.bind(ctx, ctx.component.scopeKey));
+						// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
+						// 	noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+						// }
+					}.bind(ctx, ctx.component.scopeKey));
+				}.bind(ctx, ctx));
+
 			}
 
 
@@ -1180,7 +1212,7 @@
 			scope.$on("$destroy", function () {
 				//console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
 				PubSub.unsubscribe(pubID);
-				if(observer) observer.disconnect();
+				//if(observer) observer.disconnect();
 
 				//stopNoNavigationWatch();
 			});
@@ -1287,207 +1319,209 @@
 	angular.module("noinfopath.forms")
 		.config(["$stateProvider", function ($stateProvider) {
 			stateProvider = $stateProvider;
-	}])
+		}])
 
-	.run(["$rootScope", function ($rootScope) {
-		$rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-			//console.log("$stateChangeSuccess");
-			event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
-			event.currentScope.$root.noNav[fromState.name] = fromParams;
-		});
+		.run(["$rootScope", "noAreaLoader", function ($rootScope, noAreaLoader) {
+			$rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+				//console.log("$stateChangeSuccess");
+				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
+				event.currentScope.$root.noNav[fromState.name] = fromParams;
+
+				noAreaLoader.registerArea(toState.name);
+			});
 
 		}])
 
-	.directive("noNav", ["$q", "$state", "noFormConfig", function ($q, $state, noFormConfig) {
+		.directive("noNav", ["$q", "$state", "noFormConfig", function ($q, $state, noFormConfig) {
 
-		function _link(scope, el, attrs) {
-			var navFns = {
-					"home": function (nbCfg) {
-						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav);
+			function _link(scope, el, attrs) {
+				var navFns = {
+						"home": function (nbCfg) {
+							var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav);
 
-						$state.go(route);
-					},
-					"back": function (nbCfg) {
-						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
-							// params = {
-							// 	entity: $state.params.entity
-							// };
-							params = scope.noNav[route];
+							$state.go(route);
+						},
+						"back": function (nbCfg) {
+							var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
+								// params = {
+								// 	entity: $state.params.entity
+								// };
+								params = scope.noNav[route];
 
-						$state.go(route, params);
-					},
-					"writeable": function () {
-						noFormConfig.showNavBar(noFormConfig.navBarNames.WRITEABLE);
-					},
-					"new": function (nbCfg) {
-						var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
-							params = scope.$root.noNav[route];
+							$state.go(route, params);
+						},
+						"writeable": function () {
+							noFormConfig.showNavBar(noFormConfig.navBarNames.WRITEABLE);
+						},
+						"new": function (nbCfg) {
+							var route = noInfoPath.getItem(nbCfg.routes, attrs.noNav),
+								params = scope.$root.noNav[route];
 
-						params = params ? params : {};
+							params = params ? params : {};
 
-						params.entity = $state.params.entity;
-						if(attrs.noNav === "new" && route == "vd.entity.edit") {
-							params.id = "";
-						} else {
-							params = $state.params;
+							params.entity = $state.params.entity;
+							if(attrs.noNav === "new" && route == "vd.entity.edit") {
+								params.id = "";
+							} else {
+								params = $state.params;
+							}
+
+							//console.log(route, params);
+							if(route) $state.go(route, params);
+
+						},
+						"kendo-new-row": function () {
+							scope.noGrid.addRow();
+						},
+						"undo": function () {
+							noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
+						},
+						"undefined": function (navbar) {
+							noFormConfig.showNavBar(navbar); // default behaviour to attempt to navigate to new navbar
 						}
-
-						//console.log(route, params);
-						if(route) $state.go(route, params);
-
 					},
-					"kendo-new-row": function () {
-						scope.noGrid.addRow();
-					},
-					"undo": function () {
-						noFormConfig.showNavBar(noFormConfig.navBarNames.READONLY);
-					},
-					"undefined": function (navbar) {
-						noFormConfig.showNavBar(navbar); // default behaviour to attempt to navigate to new navbar
-					}
-				},
-				config, html;
+					config, html;
 
-			function click() {
-				var navFnKey = attrs.noNav,
-					navFn = navFns[navFnKey];
+				function click() {
+					var navFnKey = attrs.noNav,
+						navFn = navFns[navFnKey];
 
-				if(!navFn) navFn = navFns["undefined"].bind(null, navFnKey);
+					if(!navFn) navFn = navFns["undefined"].bind(null, navFnKey);
 
-				//navFn(config.noNavBar.routes[navFnKey], $state.params);
+					//navFn(config.noNavBar.routes[navFnKey], $state.params);
 
-				navFn(config.noNavBar || config.route.data.noNavBar);
+					navFn(config.noNavBar || config.route.data.noNavBar);
+				}
+
+				config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope);
+
+				el.click(click);
+
+
 			}
 
-			config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity, scope);
+			return {
+				restrict: "A",
+				scope: false,
+				link: _link
+			};
+			}])
 
-			el.click(click);
+		.directive("noNavBar", ["$q", "$compile", "noTemplateCache", "$state", "noFormConfig", function ($q, $compile, noTemplateCache, $state, noFormConfig) {
+			var navNames = {
+				search: "search",
+				edit: "edit",
+				basic: "basic"
+			};
 
+			function getTemplateUrl(elem, attr) {
+				var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity);
 
-		}
+				var url = "navbars/no-navbar-basic.tpl.html",
+					nbCfg = config.noNavBar || (config.route.data ? config.route.data.noNavBar : undefined),
+					tplKey = noFormConfig.navBarKeyFromState($state.current);
 
-		return {
-			restrict: "A",
-			scope: false,
-			link: _link
-		};
-		}])
+				if(tplKey) {
+					url = "navbars/no-navbar-" + tplKey + ".tpl.html";
+				} else if(nbCfg && nbCfg.templateUrl) {
+					url = nbCfg.templateUrl;
+				}
 
-	.directive("noNavBar", ["$q", "$compile", "noTemplateCache", "$state", "noFormConfig", function ($q, $compile, noTemplateCache, $state, noFormConfig) {
-		var navNames = {
-			search: "search",
-			edit: "edit",
-			basic: "basic"
-		};
-
-		function getTemplateUrl(elem, attr) {
-			var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity);
-
-			var url = "navbars/no-navbar-basic.tpl.html",
-				nbCfg = config.noNavBar || (config.route.data ? config.route.data.noNavBar : undefined),
-				tplKey = noFormConfig.navBarKeyFromState($state.current);
-
-			if(tplKey) {
-				url = "navbars/no-navbar-" + tplKey + ".tpl.html";
-			} else if(nbCfg && nbCfg.templateUrl) {
-				url = nbCfg.templateUrl;
+				return url;
 			}
 
-			return url;
-		}
+			function getTemplate() {
 
-		function getTemplate() {
+				var nbCfg = config.noNavBar || config.route.data.noNavBar,
+					tplKey = noFormConfig.navBarKeyFromState($state.current),
+					tplUrl = templateUrl(tplKey, nbCfg);
 
-			var nbCfg = config.noNavBar || config.route.data.noNavBar,
-				tplKey = noFormConfig.navBarKeyFromState($state.current),
-				tplUrl = templateUrl(tplKey, nbCfg);
+				return noTemplateCache.get(tplUrl)
+					.then(function (resp) {
+						html = resp; //resp.data
+						if(tplKey === navNames.edit) {
+							html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, nbCfg.scopeKey.readOnly);
+							html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
+						}
+						html = $compile(html)(scope);
+						el.html(html);
+						return;
+					})
+					.catch(function (err) {
+						if(err.status === 404) {
+							throw "noFormConfig could not locate the file `navbars/no-nav-bar.json`.";
+						} else {
+							throw err;
+						}
+					});
+			}
 
-			return noTemplateCache.get(tplUrl)
-				.then(function (resp) {
-					html = resp; //resp.data
-					if(tplKey === navNames.edit) {
-						html = html.replace(/{noNavBar\.scopeKey\.readOnly}/g, nbCfg.scopeKey.readOnly);
-						html = html.replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
-					}
-					html = $compile(html)(scope);
-					el.html(html);
-					return;
-				})
-				.catch(function (err) {
-					if(err.status === 404) {
-						throw "noFormConfig could not locate the file `navbars/no-nav-bar.json`.";
-					} else {
-						throw err;
+			function _link(scope, el, attrs) {
+				scope.$on("noTabs::Change", function (e, t, p) {
+					var te = angular.element(t.html()),
+						ta = te.attr("btnbar");
+
+					if(ta) {
+						scope.currentTabName = ta;
+						noFormConfig.btnBarChange(ta);
 					}
 				});
-		}
 
-		function _link(scope, el, attrs) {
-			scope.$on("noTabs::Change", function (e, t, p) {
-				var te = angular.element(t.html()),
-					ta = te.attr("btnbar");
+				noFormConfig.showNavBar();
 
-				if(ta) {
-					scope.currentTabName = ta;
-					noFormConfig.btnBarChange(ta);
-				}
-			});
+				scope.$on("noForm::dirty", function () {
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
+					}
+				});
 
-			noFormConfig.showNavBar();
+				scope.$on("noForm::clean", function () {
+					if(scope.currentTabName) {
+						noFormConfig.btnBarChange(scope.currentTabName);
+					}
+				});
 
-			scope.$on("noForm::dirty", function () {
-				if(scope.currentTabName) {
-					noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
-				}
-			});
-
-			scope.$on("noForm::clean", function () {
-				if(scope.currentTabName) {
-					noFormConfig.btnBarChange(scope.currentTabName);
-				}
-			});
-
-		}
-
-		function _compile(el, attrs) {
-			var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity),
-				writeable = el.find("[no-navbar='writeable']"),
-				noReset = writeable.find("[no-reset='{{noNavBar.scopeKey.writeable}}']"),
-				nbCfg = config.noNavBar || (config.route.data ? config.route.data.noNavBar : undefined),
-				tplKey = noFormConfig.navBarKeyFromState($state.current);
-
-
-			if(tplKey === navNames.edit) {
-				noReset.attr("no-reset", nbCfg.scopeKey.writeable);
-				// html = noReset.html().replace(/{noNavBar\.scopeKey\.readOnly}/g, );
-				// html = noReset.html().replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
 			}
 
-			return _link;
-		}
+			function _compile(el, attrs) {
+				var config = noFormConfig.getFormByRoute($state.current.name, $state.params.entity),
+					writeable = el.find("[no-navbar='writeable']"),
+					noReset = writeable.find("[no-reset='{{noNavBar.scopeKey.writeable}}']"),
+					nbCfg = config.noNavBar || (config.route.data ? config.route.data.noNavBar : undefined),
+					tplKey = noFormConfig.navBarKeyFromState($state.current);
 
-		return {
-			restrict: "E",
-			scope: false,
-			compile: _compile,
-			templateUrl: getTemplateUrl
-		};
+
+				if(tplKey === navNames.edit) {
+					noReset.attr("no-reset", nbCfg.scopeKey.writeable);
+					// html = noReset.html().replace(/{noNavBar\.scopeKey\.readOnly}/g, );
+					// html = noReset.html().replace(/{noNavBar\.scopeKey\.writeable}/g, nbCfg.scopeKey.writeable);
+				}
+
+				return _link;
+			}
+
+			return {
+				restrict: "E",
+				scope: false,
+				compile: _compile,
+				templateUrl: getTemplateUrl
+			};
+			}])
+
+		.directive("noReadOnly", [function () {
+			function _link(scope, el, attrs) {
+				el.append("<div class=\"no-editor-cover\"></div>");
+			}
+
+			return {
+				restrict: "A",
+				link: _link
+			};
 		}])
 
-	.directive("noReadOnly", [function () {
-		function _link(scope, el, attrs) {
-			el.append("<div class=\"no-editor-cover\"></div>");
-		}
+		.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
 
-		return {
-			restrict: "A",
-			link: _link
-		};
-	}])
-
-	.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
-
-	.service("noNavigationManager", ["$q", "$http", "$state", "noKendoHelpers", NoNavigationManagerService]);
+		.service("noNavigationManager", ["$q", "$http", "$state", "noKendoHelpers", NoNavigationManagerService]);
 })(angular);
 
 //validation.js

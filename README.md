@@ -1,5 +1,5 @@
 # noinfopath.forms
-@version 2.0.19
+@version 2.0.20
 
 Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
 
@@ -169,15 +169,6 @@ element that contains the grid rows, which will be the observers
 "target." A new `MutationObserver` object is created giving it
 a callback method that will provide an array of mutations. Each
 mutation has a list of removed nodes and a list of added nodes.
-
-Each removed node is retrieved from the noNavigation scope object
-and if it has a `deregister` method, it is called and then
-navbar that identifies with the remove node is deleted from
-the scope object.
-
-Each node added to the grid is recompiled using `$compile` via
-the `noKendoHelpers.ngCompileSelectedRow` method. Then the
-watch is established for the new row.
 
 When a KendoUI Grid is not involved, the noNavigation directive instead
 subscribes to the `no-validation::dirty-state-changed` event published by
