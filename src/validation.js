@@ -3,7 +3,7 @@
 	"use strict";
 
 	function _validate(el, field, label) {
-		if (!field) return;
+		if (!field || field.$pristine) return;
 
 		var t = el.find(".k-editor"),
 		h = el.find(".help-block");

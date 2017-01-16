@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.20
+ * @version 2.0.21
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -1529,7 +1529,7 @@
 	"use strict";
 
 	function _validate(el, field, label) {
-		if (!field) return;
+		if (!field || field.$pristine) return;
 
 		var t = el.find(".k-editor"),
 		h = el.find(".help-block");
