@@ -3,7 +3,7 @@
 	"use strict";
 
 	function _validate(el, field, label) {
-		if (!field || field.$pristine) return;
+		if (!field || (field.$pristine && field.$valid)) return;
 
 		var t = el.find(".k-editor"),
 		h = el.find(".help-block");
@@ -216,6 +216,10 @@
 
 	.directive("noEnterKey", [function() {
 		function _enterPressed(el, scope, attr) {
+
+		}
+
+		function _link(scope, el, attr) {
 			el.bind("keypress", function(e) {
 				var keyCode = e.which || e.keyCode;
 
@@ -223,14 +227,9 @@
 				{
 					var frm = el.closest("[no-form], [ng-form]");
 
-					frm.find("[no-submit]").click(); //Assume that it is a button
+					frm.find(attr.noEnterKey).click(); //Assume that it is a button
 				}
 			});
-		}
-
-		function _link(scope, el, attr) {
-			//console.warn("This will be refactored into a different module in a future release");
-			_enterPressed(el, scope);
 		}
 
 		var directive = {
