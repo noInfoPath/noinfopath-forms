@@ -338,7 +338,7 @@
 		};
 	}
 
-	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser, noDataSource) {
+	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser, noDataSource, noKendoHelpers, noPrompt) {
 		function _initSession(ctx, scope) {
 			console.log(ctx);
 		}
@@ -419,7 +419,13 @@
 
 				return $q(function(resolve, reject){
 					if(data.$valid) {
-						comp.noDataSource.noTransaction ? noTrans.upsert(data).then(_successful.bind(null, ctx, resolve, newctx)).catch(_fault.bind(null, ctx, reject, newctx)): _upsert(ctx, scope, el, data, noTrans, newctx);
+						if(comp.noDataSource.noTransaction) {
+							noTrans.upsert(data)
+								.then(_successful.bind(null, ctx, resolve, newctx))
+								.catch(_fault.bind(null, ctx, reject, newctx));
+						} else {
+							_upsert(ctx, scope, el, data, noTrans, newctx);
+						}
 					} else {
 						scope.$broadcast("no::validate");
 						reject("Form is invalid.");
@@ -463,13 +469,77 @@
 			return promise;
 		}
 
+		function _deleteSelected(ctx, scope, el, gridName, tableName, entityLabel, primaryKey, message) {
+			var grid = scope[gridName],
+				checked = grid.tbody.find("input:checkbox:checked"),
+				dsCfg = {
+					"dataProvider": "noIndexedDb",
+					"databaseName": "rmEFR2",
+					"entityName": tableName,
+					"primaryKey": primaryKey
+				},
+				ds = noDataSource.create(dsCfg, scope),
+				promises = [],
+				trans,
+				compiledMessage = message.replace(/{{pluralizedCount}}/gi, pluralize(noInfoPath.splitCamelCaseAddSpace(entityLabel), checked.length, true));
+
+			function _executeDeletes(scope, checked, ds, trans) {
+				noPrompt.show("Action in Progress", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Deleting " + pluralize(entityLabel, checked.length, true) + "</div>" , null, {});
+
+				for (var c = 0; c < checked.length; c++) {
+					var rowData = noKendoHelpers.currentGridRowData(scope, $(checked[c]));
+
+					promises.push(ds.destroy(rowData, trans));
+				}
+
+
+				$q.all(promises)
+					.then(function(results){
+						if(trans) noTransactionCache.endTransaction(trans);
+						grid.dataSource.read();
+						$("[grid-selection-changed]").prop("disabled", true);
+						$("[select-all-grid-rows='reportGrid']").prop("checked", false);
+						noPrompt.hide(1000);
+					})
+					.catch(function(err){
+						console.error(err);
+						grid.dataSource.read();
+						$("[grid-selection-changed]").prop("disabled", true);
+						$("[select-all-grid-rows='reportGrid']").prop("checked", false);
+						noPrompt.hide(1000);
+					});
+			}
+
+			noPrompt.show("Confirm Deletion", "<div class=\"center-block\" style=\"font-size: 1.25em; width: 80%\">" + compiledMessage + "</div><div style=\"width: 60%\" class=\"center-block\"><button type=\"button\" class=\"btn btn-danger btn-block\" value=\"delete\">Permanently Delete Selected Items</button><button type=\"button\" class=\"btn btn-info btn-block\" value=\"remove\">Removed Selected from this Device Only</button><button type=\"button\" class=\"btn btn-default btn-block\" value=\"cancel\">Cancel, Do Not Remove or Delete</button></div>", function(e){
+				switch($(e.target).attr("value")) {
+					case "remove":
+						_executeDeletes(scope, checked, ds);
+						break;
+
+					case "delete":
+						noPrompt.show("Confirm Permanent  Deletion", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\"><b class=\"text-danger\">WARNING: THIS ACTION IS NOT REVERSABLE<br/>ALL USERS WILL BE AFFECTED BY THIS ACTION</b></div><div class=\"center-block text-center\" style=\"font-size: 1.25em;\">You are about to permanently delete " + pluralize(entityLabel, checked.length, true) + ".<br/>Click OK to proceed, or Cancel to abort this operation.</div>",function(e){
+							if($(e.target).attr("value") === "OK") {
+								trans = noTransactionCache.beginTransaction(noLoginService.user.userId, {noDataSource: dsCfg}, scope);
+								_executeDeletes(scope, checked, ds, trans);
+							}
+						}, {showFooter: true, showOK: true, showCancel: true});
+						break;
+
+					default:
+						break;
+				}
+
+			}, {showOK: true, showCancel: true});
+
+		}
+
 		this.save = _save;
 		this.upsert = _upsert;
 		this.undo = _undo;
 		this.initSession = _initSession;
 		this.beginTransaction = _initSession;
 		this.cacheRead = _cacheRead;
-
+		this.deleteSelected = _deleteSelected;
 	}
 
 	function NoRecordStatsDirective($q, $http, $compile, noFormConfig, $state) {
@@ -505,13 +575,71 @@
 		};
 	}
 
+	function NoPromptService($rootScope, $timeout) {
+		this.show = function(title, message, cb, options) {
+			var b = $("body"),
+				cover = $("<div class=\"no-modal-container ng-hide\"></div>"),
+				box = $("<no-message-box></no-message-box>"),
+				header = $("<no-box-header></no-box-header>"),
+				body = $("<no-box-body></no-box-body>"),
+				footer = $("<div class=\"no-flex horizontal flex-center no-m-b-md\"></div>");
+
+			header.append(title);
+
+			body.append(message);
+
+			box.append(header);
+			box.append(body);
+
+			if(options.showFooter) {
+				if(options.showOK) footer.append("<button type=\"button\" class=\"btn btn-primary no-m-r-md\" value=\"OK\">OK</button>");
+				if(options.showCancel) footer.append("<button type=\"button\" class=\"btn btn-primary\" value=\"Cancel\">Cancel</button>");
+				box.append(footer);
+			}
+
+			cover.append(box);
+
+			b.append(cover);
+
+			box.find("button").click(function(cb, e){
+				_hide();
+				if(cb) cb(e);
+			}.bind(null, cb));
+
+			$rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams, options){
+				if($(".no-modal-container").length) {
+					_hide();
+				}
+			    // transitionTo() promise will be rejected with
+			    // a 'transition prevented' error
+			});
+
+			cover.removeClass("ng-hide");
+		};
+
+		function _hide(to) {
+			if(to) {
+				$timeout(function(){$(".no-modal-container").remove();}, to);
+			} else {
+				$(".no-modal-container").remove();
+			}
+
+		}
+		this.hide = _hide;
+	}
+
+
 	angular.module("noinfopath.forms")
 		.directive("noForm", ['$timeout', '$q', '$state', '$injector', 'noConfig', 'noFormConfig', 'noLoginService', 'noTransactionCache', 'lodash', NoFormDirective])
 
-	.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
+		.directive("noRecordStats", ["$q", "$http", "$compile", "noFormConfig", "$state", NoRecordStatsDirective])
 
-	.directive("noGrowler", ["$timeout", NoGrowlerDirective])
+		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-	.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", NoDataManagerService]);
+		.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
+
+		.service("noPrompt", ["$rootScope", "$timeout", NoPromptService])
+
+		;
 
 })(angular);
