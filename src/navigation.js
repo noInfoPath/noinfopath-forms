@@ -440,15 +440,21 @@
 			stateProvider = $stateProvider;
 		}])
 
-		.run(["$rootScope", "noAreaLoader", function ($rootScope, noAreaLoader) {
+		.run(["$rootScope", "noAreaLoader", "noPrompt", function ($rootScope, noAreaLoader, noPrompt) {
 			$rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
 				//console.log("$stateChangeSuccess");
 				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
 				event.currentScope.$root.noNav[fromState.name] = fromParams;
 
-				noAreaLoader.registerArea(toState.name);
+				console.log("noAreaLoader::Start", toState.name);
+				if(noAreaLoader.registerArea(toState.name) > 2) {
+					noPrompt.show("Loading Area", "<div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div>" , null, {});
+				}
 			});
 
+			window.addEventListener("error", function() {
+				noPrompt.hide(0);
+			});
 		}])
 
 		.directive("noNav", ["$q", "$state", "noFormConfig", function ($q, $state, noFormConfig) {

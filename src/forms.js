@@ -580,7 +580,7 @@
 
 	function NoPromptService($rootScope, $timeout) {
 		this.show = function(title, message, cb, options) {
-			var b = $("body"),
+			var b = $("body", window.top.document),
 				cover = $("<div class=\"no-modal-container ng-hide\"></div>"),
 				box = $("<no-message-box></no-message-box>"),
 				header = $("<no-box-header></no-box-header>"),
@@ -610,7 +610,7 @@
 			}.bind(null, cb));
 
 			$rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams, options){
-				if($(".no-modal-container").length) {
+				if($(".no-modal-container", window.top.document).length) {
 					_hide();
 				}
 			    // transitionTo() promise will be rejected with
@@ -622,9 +622,9 @@
 
 		function _hide(to) {
 			if(to) {
-				$timeout(function(){$(".no-modal-container").remove();}, to);
+				$timeout(function(){$(".no-modal-container", window.top.document).remove();}, to);
 			} else {
-				$(".no-modal-container").remove();
+				$(".no-modal-container", window.top.document).remove();
 			}
 
 		}
