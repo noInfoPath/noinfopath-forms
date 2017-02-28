@@ -447,8 +447,8 @@
 				event.currentScope.$root.noNav[fromState.name] = fromParams;
 
 				console.log("noAreaLoader::Start", toState.name);
-				if(noAreaLoader.registerArea(toState.name) > 2) {
-					noPrompt.show("Loading Area", "<div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div>" , null, {});
+				if(toState.name !== "startup" && noAreaLoader.registerArea(toState.name) > 3) {
+					noPrompt.show("Loading Area", "<div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div>" , null, {width: "40%"});
 				}
 			});
 

@@ -66,10 +66,10 @@
 
 			if(execQueue) {
 				noActionQueue.synchronize(execQueue)
-					.then(PubSub.publish.bind(PubSub, "noTabs::change", {tabKey: tabKey, tabIndex: ndx}));
+					.then(PubSub.publish.bind(PubSub, "noTabs::change", {tabKey: tabKey, tabIndex: ndx, tab: tab, panel: pnl}));
 			}else{
 				//scope.$broadcast("")
-				PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx});
+				PubSub.publish("noTabs::change", {tabKey: tabKey, tabIndex: ndx, tab: tab, panel: pnl});
 			}
 
 

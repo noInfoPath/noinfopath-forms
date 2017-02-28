@@ -361,16 +361,19 @@
 				}
 
 				if(newctx.scope.noNavigation) {
-					var navState = newctx.scope.noNavigation[newctx.ctx.component.scopeKey].validationState;
+					var nav = newctx.scope.noNavigation[newctx.ctx.component.scopeKey],
+						navState = nav.validationState;
 
-					if(navState.form.accept) {
+					if(navState) {
+						if(navState.form.accept) {
 
-						navState.form.accept(navState.form);
+							navState.form.accept(navState.form);
 
-					} else {
-						navState.form.$setUntouched();
-						navState.form.$setPristine();
-						navState.form.$setSubmitted();
+						} else {
+							navState.form.$setUntouched();
+							navState.form.$setPristine();
+							navState.form.$setSubmitted();
+						}
 					}
 				}
 
@@ -578,25 +581,56 @@
 		};
 	}
 
-	function NoPromptService($rootScope, $timeout) {
+	function NoPromptService($compile, $rootScope, $timeout, PubSub) {
+		var pubSubId;
 		this.show = function(title, message, cb, options) {
 			var b = $("body", window.top.document),
 				cover = $("<div class=\"no-modal-container ng-hide\"></div>"),
 				box = $("<no-message-box></no-message-box>"),
 				header = $("<no-box-header></no-box-header>"),
 				body = $("<no-box-body></no-box-body>"),
-				footer = $("<div class=\"no-flex horizontal flex-center no-m-b-md\"></div>");
+				footer = $("<no-box-footer class=\"no-flex horizontal flex-center no-m-b-md no-p-t-md\"></no-box-footer>"),
+				ok = $("<button type=\"button\" class=\"btn btn-primary btn-sm btn-callback no-m-r-md\"></button>"),
+				cancel = $("<button type=\"button\" class=\"btn btn-primary btn-sm btn-callback btn-auto-hide\"></button>");
+
+			$rootScope.noPrompt = {scope: options.scope};
 
 			header.append(title);
 
-			body.append(message);
+			body.append($compile(message)(options.scope || $rootScope));
 
 			box.append(header);
+
 			box.append(body);
 
+
 			if(options.showFooter) {
-				if(options.showOK) footer.append("<button type=\"button\" class=\"btn btn-primary no-m-r-md\" value=\"OK\">OK</button>");
-				if(options.showCancel) footer.append("<button type=\"button\" class=\"btn btn-primary\" value=\"Cancel\">Cancel</button>");
+				if(options.showFooter.showOK) {
+					ok.attr("value", options.showFooter.okValue || "ok");
+					ok.text(options.showFooter.okLabel || "OK");
+					if(options.showFooter.okAutoHide) {
+						ok.addClass("btn-auto-hide");
+					} else {
+						ok.addClass("btn-no-auto-hide");
+					}
+					if(!!options.showFooter.okDisabled) {
+						$rootScope.noPrompt.okDisable = options.showFooter.okDisabled;
+						ok.attr("ng-disabled", options.showFooter.okDisabled);
+					}
+					footer.append($compile(ok)(options.scope || $rootScope));
+				}
+
+				if(options.showFooter.okPubSub) {
+					pubSubId = PubSub.subscribe(options.showFooter.okPubSub.key, options.showFooter.okPubSub.fn);
+				}
+
+				if(options.showFooter.showCancel) {
+					cancel.attr("value", "Cancel");
+					cancel.text(options.showFooter.cancelLabel || "Cancel");
+					footer.append(cancel);
+				}
+
+
 				box.append(footer);
 			}
 
@@ -604,8 +638,15 @@
 
 			b.append(cover);
 
-			box.find("button").click(function(cb, e){
+			box.css("min-width", options.width || "60%");
+			box.css("min-height", options.height || "10%");
+
+			box.find("button.btn-callback.btn-auto-hide").click(function(cb, e){
 				_hide();
+				if(cb) cb(e);
+			}.bind(null, cb));
+
+			box.find("button.btn-callback.btn-no-auto-hide").click(function(cb, e){
 				if(cb) cb(e);
 			}.bind(null, cb));
 
@@ -618,13 +659,23 @@
 			});
 
 			cover.removeClass("ng-hide");
+
+
 		};
 
 		function _hide(to) {
 			if(to) {
-				$timeout(function(){$(".no-modal-container", window.top.document).remove();}, to);
+				$timeout(function(){
+					$(".no-modal-container", window.top.document).remove();
+					delete $rootScope.noPrompt;
+					if(pubSubId) PubSub.unsubscribe(pubSubId);
+					pubSubId = undefined;
+				}, to);
 			} else {
 				$(".no-modal-container", window.top.document).remove();
+				delete $rootScope.noPrompt;
+				if(pubSubId) PubSub.unsubscribe(pubSubId);
+				pubSubId = undefined;
 			}
 
 		}
@@ -641,7 +692,7 @@
 
 		.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
 
-		.service("noPrompt", ["$rootScope", "$timeout", NoPromptService])
+		.service("noPrompt", ["$compile", "$rootScope", "$timeout", "PubSub", NoPromptService])
 
 		;
 
