@@ -490,7 +490,8 @@
 				compiledMessage = message.replace(/{{pluralizedCount}}/gi, pluralize(noInfoPath.splitCamelCaseAddSpace(entityLabel), checked.length, true));
 
 			function _executeDeletes(scope, checked, ds, trans) {
-				noPrompt.show("Action in Progress", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Deleting " + pluralize(entityLabel, checked.length, true) + "</div>" , null, {});
+				noPrompt.show("Deletion in Progress", "<div><div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Deleting " + pluralize(entityLabel, checked.length, true) + "</div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>" , null, {height: "15%"});
+
 
 				for (var c = 0; c < checked.length; c++) {
 					var rowData = noKendoHelpers.currentGridRowData(scope, $(checked[c]));
@@ -516,26 +517,45 @@
 					});
 			}
 
-			noPrompt.show("Confirm Deletion", "<div class=\"center-block\" style=\"font-size: 1.25em; width: 80%\">" + compiledMessage + "</div><div style=\"width: 60%\" class=\"center-block\"><button type=\"button\" class=\"btn btn-danger btn-block\" value=\"delete\">Permanently Delete Selected Items</button><button type=\"button\" class=\"btn btn-info btn-block\" value=\"remove\">Removed Selected from this Device Only</button><button type=\"button\" class=\"btn btn-default btn-block\" value=\"cancel\">Cancel, Do Not Remove or Delete</button></div>", function(e){
+			noPrompt.show("Confirm Deletion", "<div class=\"center-block\" style=\"font-size: 1.25em;\">" + compiledMessage + "</div><div style=\"width: 60%\" class=\"center-block\"><button type=\"button\" class=\"btn btn-danger btn-block btn-callback btn-auto-hide\" value=\"delete\">Permanently Delete Selected Items</button><button type=\"button\" class=\"btn btn-info btn-block btn-callback btn-auto-hide\" value=\"remove\">Removed Selected from this Device Only</button><button type=\"button\" class=\"btn btn-default btn-block btn-callback btn-auto-hide\" value=\"cancel\">Cancel, Do Not Remove or Delete</button></div>", function(e){
 				switch($(e.target).attr("value")) {
 					case "remove":
 						_executeDeletes(scope, checked, ds);
 						break;
 
 					case "delete":
-						noPrompt.show("Confirm Permanent  Deletion", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\"><b class=\"text-danger\">WARNING: THIS ACTION IS NOT REVERSABLE<br/>ALL USERS WILL BE AFFECTED BY THIS ACTION</b></div><div class=\"center-block text-center\" style=\"font-size: 1.25em;\">You are about to permanently delete " + pluralize(entityLabel, checked.length, true) + ".<br/>Click OK to proceed, or Cancel to abort this operation.</div>",function(e){
-							if($(e.target).attr("value") === "OK") {
-								trans = noTransactionCache.beginTransaction(noLoginService.user.userId, {noDataSource: dsCfg}, scope);
-								_executeDeletes(scope, checked, ds, trans);
-							}
-						}, {showFooter: true, showOK: true, showCancel: true});
+						noPrompt.show("Confirm Permanent Deletion", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\"><b class=\"text-danger\">WARNING: THIS ACTION IS NOT REVERSABLE<br/>ALL USERS WILL BE AFFECTED BY THIS ACTION</b></div><div class=\"center-block text-center\" style=\"font-size: 1.25em;\">You are about to permanently delete " + pluralize(entityLabel, checked.length, true) + ".<br/>Click OK to proceed, or Cancel to abort this operation.</div>",function(e){
+								if($(e.target).attr("value") === "OK") {
+									trans = noTransactionCache.beginTransaction(noLoginService.user.userId, {noDataSource: dsCfg}, scope);
+									_executeDeletes(scope, checked, ds, trans);
+								}
+							}, {
+								showCloseButton: true,
+								showFooter: {
+									showCancel: true,
+									cancelLabel: "Cancel",
+									showOK: true,
+									okLabel: "OK",
+									okValue: "OK",
+									okAutoHide: true
+								},
+								scope: scope,
+								width: "60%",
+								height: "35%",
+
+							});
 						break;
 
 					default:
 						break;
 				}
 
-			}, {showOK: true, showCancel: true});
+			}, {
+				showCloseButton: true,
+				scope: scope,
+				width: "60%",
+				height: "35%"
+			});
 
 		}
 
