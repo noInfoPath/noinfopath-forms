@@ -1,6 +1,6 @@
 /**
  * # noinfopath.forms
- * @version 2.0.28
+ * @version 2.0.29
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -353,7 +353,7 @@
 		};
 	}
 
-	function NoDataManagerService($q, $rootScope, noLoginService, noTransactionCache, noParameterParser, noDataSource, noKendoHelpers, noPrompt) {
+	function NoDataManagerService($timeout, $q, $rootScope, noLoginService, noTransactionCache, noParameterParser, noDataSource, noKendoHelpers, noPrompt) {
 		function _initSession(ctx, scope) {
 			console.log(ctx);
 		}
@@ -393,13 +393,34 @@
 				}
 
 			}
+			$timeout(function(){
+				noPrompt.hide();
+				resolve(ctx);
 
-			resolve(ctx);
+			}, 500);
 		}
 
 		function _fault(ctx, reject, err) {
-			ctx.error = err;
-			reject(ctx);
+			noPrompt.show(
+		        "Save Error", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Save Failed.<code>" + JSON.stringify(err) + "</code></div>",
+		        function(e){
+		            if($(e.target).attr("value") === "Cancel") {
+						ctx.error = err;
+						reject(ctx);
+		            }
+		        },
+		        {
+		            showCloseButton: true,
+		            showFooter: {
+		                showCancel: true,
+		                cancelLabel: "Close",
+		                showOK: false
+		            },
+		            scope: scope,
+		            width: "60%",
+		            height: "35%",
+		        });
+
 		}
 
 		function _upsert(ctx, scope, el, data, noTrans, newctx) {
@@ -438,6 +459,14 @@
 						scope: scope
 					};
 
+				noPrompt.show(
+					"Save in Progress",
+					"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
+					null,
+					{
+						height: "15%"
+					}
+				);
 
 				return $q(function(resolve, reject){
 					if(data.$valid) {
@@ -868,7 +897,7 @@
 
 		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-		.service("noDataManager", ["$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
+		.service("noDataManager", ["$timeout", "$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
 
 		.service("noPrompt", ["$compile", "$rootScope", "$timeout", "PubSub", NoPromptService])
 
