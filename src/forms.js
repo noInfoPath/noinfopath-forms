@@ -623,8 +623,6 @@
 
 		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-		.service("noDataManager", ["$timeout", "$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
-
 		.service("noPrompt", ["$compile", "$rootScope", "$timeout", "PubSub", NoPromptService])
 
 		;

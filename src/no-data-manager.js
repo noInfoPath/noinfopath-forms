@@ -262,4 +262,7 @@
 		this.deleteSelected = _deleteSelected;
 	}
 
+	angular.module("noinfopath.forms")
+		.service("noDataManager", ["$timeout", "$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
+		;
 })(angular);
