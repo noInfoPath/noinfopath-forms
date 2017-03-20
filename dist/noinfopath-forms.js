@@ -1,6 +1,6 @@
 /*
  * # noinfopath.forms
- * @version 2.0.31
+ * @version 2.0.33
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -952,27 +952,16 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 			}
 
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
-				ctx.isDirty = state.isDirty;
-				if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
+				if(ctx.routeName) {
+					ctx.isDirty = state.isDirty;
+					if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx);					
+				}
 			});
 
 			scope.$on("$destroy", function () {
 				//console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
 				PubSub.unsubscribe(pubID);
 			});
-
-			// scope.$on("noForm::dirty", function () {
-			// 	var cover = el.find(".no-editor-cover");
-			// 	//console.log("noFormDirty caught.");
-			// 	cover.removeClass("ng-hide");
-			// });
-			//
-			// scope.$on("noForm::clean", function () {
-			// 	var cover = el.find(".no-editor-cover");
-			// 	//console.log("noFormDirty caught.");
-			// 	cover.addClass("ng-hide");
-			//
-			// });
 
 		}
 
@@ -1391,7 +1380,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
 			var barkey = navBarName;
-			//console.log("changeNavBar", arguments);
+			console.log("changeNavBar", arguments);
 			if(barid === "^") {
 				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),
 					p = t.split(".");
@@ -1440,9 +1429,19 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 			stateProvider = $stateProvider;
 		}])
 
-		.run(["$rootScope", "noAreaLoader", "noPrompt", function ($rootScope, noAreaLoader, noPrompt) {
+		.run(["$rootScope", "noAreaLoader", "noPrompt", "PubSub", "$state", function ($rootScope, noAreaLoader, noPrompt, PubSub, $state) {
 			$rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
 				//console.log("$stateChangeSuccess");
+				toState.data = angular.extend({}, toState.data);
+
+				toState.data.pubSubId = PubSub.subscribe("noSync::complete", function(a, b) {
+					//TODO: Stash the pubsub id on the toState's data property
+					//TODO: unsubscribe fromState's data.pubsub.id.
+					if(toState.data.pubSubId) PubSub.unsubscribe(toState.data.pubSubId);
+					//TODO: reload the current state. (if possible)
+					$state.reload($state.current.name);
+				});
+
 				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
 				event.currentScope.$root.noNav[fromState.name] = fromParams;
 
@@ -1452,6 +1451,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 					noPrompt.show("Loading Area", "<div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div>" , null, {width: "40%"});
 				}
+
 			});
 
 
@@ -1773,8 +1773,15 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 					ctl.bind('blur', _blur.bind(null, el, fld, lbl));
 
-					scope.$on('no::validate', _validate.bind(null, el, fld, lbl));
-					scope.$on('no::validate:reset', _resetErrors.bind(null, el, fld, lbl));
+					scope.$on("$destroy", function(unbind1, unbind2) {
+						console.log("Unbinding", 'no::validate', 'no::validate:reset');
+						unbind1();
+						unbind2();
+					}.bind(
+						this,
+						scope.$on('no::validate', _validate.bind(null, el, fld, lbl)),
+						scope.$on('no::validate:reset', _resetErrors.bind(null, el, fld, lbl))
+					));
 
 
 				}.bind(this, i);
@@ -1903,14 +1910,16 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 				//directives hierarchy.
 				var wk = form.$name + ".$dirty";
 				//console.log("noValidation", wk, form, scope[wk], Object.is(form, scope[wk]));
-				scope.$watch(wk, function() {
-					console.log("noValidation", this.$name, "isDirty", this.$dirty);
+				var unbind = scope.$watch(wk, function(n, o, s) {
+					console.log("noValidation", this.$name, "isDirty", this.$dirty, n, o);
 					pubsub.publish("no-validation::dirty-state-changed", {
 						isDirty: form.$dirty,
 						pure: noParameterParser.parse(form),
 						form: form
 					});
 				}.bind(form));
+
+				scope.$on("$destroy", unbind);
 			}
 		};
 	}]);
@@ -2345,6 +2354,10 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
  			}
 
  			return {
+				routeName: routeName,
+				entityName: entityName,
+				componentType: componentType,
+				componentKey: componentKey,
  				config: config,
  				route: route,
  				form: form,
@@ -2368,6 +2381,9 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 
 			return {
+				screenName: screenName,
+				dbName: dbName,
+				noid: noid,
  				config: config,
  				route: route,
  				form: form,
@@ -2578,6 +2594,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 		}
 
 		function _fault(ctx, reject, err) {
+			console.error(err);
 			noPrompt.show(
 				"Save Error", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Save Failed.<code>" + JSON.stringify(err) + "</code></div>",
 				function(e){
@@ -2634,7 +2651,8 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 						comp: comp,
 						trans: noTrans,
 						scope: scope
-					};
+					},
+					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName);
 
 				noPrompt.show(
 					"Save in Progress",
@@ -2647,12 +2665,14 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 				return $q(function(resolve, reject){
 					if(data.$valid) {
+						data.commit();
 						if(comp.noDataSource.noTransaction) {
-							noTrans.upsert(data)
+
+							noTrans.upsert(data.current)
 								.then(_successful.bind(null, ctx, resolve, newctx))
 								.catch(_fault.bind(null, ctx, reject, newctx));
 						} else {
-							_upsert(ctx, scope, el, data, noTrans, newctx);
+							_upsert(ctx, scope, el, data.current, noTrans, newctx);
 						}
 					} else {
 						scope.$broadcast("no::validate");
@@ -2664,13 +2684,9 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 		}
 
 		function _undo(ctx, scope, el, dataKey, undoDataKey) {
-			var data = noInfoPath.getItem(scope, dataKey),
-				undoData = noInfoPath.getItem(scope, undoDataKey);
-
-			console.log(data, undoData);
-
 			return $q(function (resolve, reject) {
-				resolve("undo code required.");
+				var data = noInfoPath.getItem(scope, dataKey);
+				data.undo();
 			});
 		}
 

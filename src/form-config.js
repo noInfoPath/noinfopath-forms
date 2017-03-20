@@ -427,6 +427,10 @@
  			}
 
  			return {
+				routeName: routeName,
+				entityName: entityName,
+				componentType: componentType,
+				componentKey: componentKey,
  				config: config,
  				route: route,
  				form: form,
@@ -450,6 +454,9 @@
 
 
 			return {
+				screenName: screenName,
+				dbName: dbName,
+				noid: noid,
  				config: config,
  				route: route,
  				form: form,

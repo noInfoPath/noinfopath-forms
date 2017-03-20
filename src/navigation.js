@@ -393,7 +393,7 @@
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
 			var barkey = navBarName;
-			//console.log("changeNavBar", arguments);
+			console.log("changeNavBar", arguments);
 			if(barid === "^") {
 				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),
 					p = t.split(".");
@@ -442,9 +442,19 @@
 			stateProvider = $stateProvider;
 		}])
 
-		.run(["$rootScope", "noAreaLoader", "noPrompt", function ($rootScope, noAreaLoader, noPrompt) {
+		.run(["$rootScope", "noAreaLoader", "noPrompt", "PubSub", "$state", function ($rootScope, noAreaLoader, noPrompt, PubSub, $state) {
 			$rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
 				//console.log("$stateChangeSuccess");
+				toState.data = angular.extend({}, toState.data);
+
+				toState.data.pubSubId = PubSub.subscribe("noSync::complete", function(a, b) {
+					//TODO: Stash the pubsub id on the toState's data property
+					//TODO: unsubscribe fromState's data.pubsub.id.
+					if(toState.data.pubSubId) PubSub.unsubscribe(toState.data.pubSubId);
+					//TODO: reload the current state. (if possible)
+					$state.reload($state.current.name);
+				});
+
 				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
 				event.currentScope.$root.noNav[fromState.name] = fromParams;
 
@@ -454,6 +464,7 @@
 
 					noPrompt.show("Loading Area", "<div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div>" , null, {width: "40%"});
 				}
+
 			});
 
 

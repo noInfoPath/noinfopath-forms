@@ -241,27 +241,16 @@
 			}
 
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
-				ctx.isDirty = state.isDirty;
-				if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx.isDirty);
+				if(ctx.routeName) {
+					ctx.isDirty = state.isDirty;
+					if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx);					
+				}
 			});
 
 			scope.$on("$destroy", function () {
 				//console.log("noTabs", "$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed", pubID);
 				PubSub.unsubscribe(pubID);
 			});
-
-			// scope.$on("noForm::dirty", function () {
-			// 	var cover = el.find(".no-editor-cover");
-			// 	//console.log("noFormDirty caught.");
-			// 	cover.removeClass("ng-hide");
-			// });
-			//
-			// scope.$on("noForm::clean", function () {
-			// 	var cover = el.find(".no-editor-cover");
-			// 	//console.log("noFormDirty caught.");
-			// 	cover.addClass("ng-hide");
-			//
-			// });
 
 		}
 

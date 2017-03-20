@@ -50,6 +50,7 @@
 		}
 
 		function _fault(ctx, reject, err) {
+			console.error(err);
 			noPrompt.show(
 				"Save Error", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Save Failed.<code>" + JSON.stringify(err) + "</code></div>",
 				function(e){
@@ -106,7 +107,8 @@
 						comp: comp,
 						trans: noTrans,
 						scope: scope
-					};
+					},
+					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName);
 
 				noPrompt.show(
 					"Save in Progress",
@@ -119,12 +121,14 @@
 
 				return $q(function(resolve, reject){
 					if(data.$valid) {
+						data.commit();
 						if(comp.noDataSource.noTransaction) {
-							noTrans.upsert(data)
+
+							noTrans.upsert(data.current)
 								.then(_successful.bind(null, ctx, resolve, newctx))
 								.catch(_fault.bind(null, ctx, reject, newctx));
 						} else {
-							_upsert(ctx, scope, el, data, noTrans, newctx);
+							_upsert(ctx, scope, el, data.current, noTrans, newctx);
 						}
 					} else {
 						scope.$broadcast("no::validate");
@@ -136,13 +140,9 @@
 		}
 
 		function _undo(ctx, scope, el, dataKey, undoDataKey) {
-			var data = noInfoPath.getItem(scope, dataKey),
-				undoData = noInfoPath.getItem(scope, undoDataKey);
-
-			console.log(data, undoData);
-
 			return $q(function (resolve, reject) {
-				resolve("undo code required.");
+				var data = noInfoPath.getItem(scope, dataKey);
+				data.undo();
 			});
 		}
 

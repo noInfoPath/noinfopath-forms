@@ -130,7 +130,7 @@ module.exports = function (grunt) {
 	grunt.registerTask('document', ['concat:noinfopath', 'nodocs:wiki']);
 	grunt.registerTask('wikiWack', ['shell:wiki1', 'concat:wikiHome', 'copy:wiki', 'shell:wiki2']);
 	grunt.registerTask('updateWiki', ['document', 'wikiWack']);
-	grunt.registerTask('release', ['bumpup', 'version', 'concat:noinfopath', 'nodocs:internal', 'concat:readme']);
+	grunt.registerTask('release', ['bumpup', 'version', 'updateWiki']);
 
 	//Default task(s).
 	grunt.registerTask('build', ['bumpup', 'version', 'concat:noinfopath', 'nodocs:internal', 'concat:readme']);
