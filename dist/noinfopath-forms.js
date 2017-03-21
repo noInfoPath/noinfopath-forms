@@ -1,6 +1,6 @@
 /*
  * # noinfopath.forms
- * @version 2.0.33
+ * @version 2.0.34
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -2677,6 +2677,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 					} else {
 						scope.$broadcast("no::validate");
 						reject("Form is invalid.");
+						noPrompt.hide();
 					}
 				});
 

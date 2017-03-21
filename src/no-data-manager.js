@@ -133,6 +133,7 @@
 					} else {
 						scope.$broadcast("no::validate");
 						reject("Form is invalid.");
+						noPrompt.hide();
 					}
 				});
 
