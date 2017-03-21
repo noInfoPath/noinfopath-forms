@@ -128,6 +128,7 @@
 
 				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
 			} else {
+				console.warn("Possible dead code area.");
 				//scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noNavigationManager.changeNavBar.bind(ctx, ctx, scope, el, ctx.component.scopeKey));
 			}
 
@@ -141,7 +142,7 @@
 
 		function _link(ctx, scope, el, attrs) {
 			var bars = ctx.component.bars,
-				pubID;
+				pubID, unwatch;
 
 			el.empty();
 
@@ -217,6 +218,7 @@
 			*	a KendoUI Grid's RowUID.
 			*/
 			if(ctx.component.useKendoRowDataUid) {
+				console.warn("Possible dead code area.");
 				/*
 				*	#### @property noNavigation::useKendoRowDataUid
 				*
@@ -242,50 +244,7 @@
 				*	a callback method that will provide an array of mutations. Each
 				*	mutation has a list of removed nodes and a list of added nodes.
 				*/
-				// var target = noKendoHelpers.getGridRow(el).parent()[0];
-				//
-				// // create an observer instance
-				// var observer = new MutationObserver(function(ctx, scope, el, mutations) {
-				// 	for(var m=0; m<mutations.length;m++) {
-				// 		var mutation = mutations[m];
-				//
-				// 		/*
-				// 		*	Each removed node is retrieved from the noNavigation scope object
-				// 		*	and if it has a `deregister` method, it is called and then
-				// 		*	navbar that identifies with the remove node is deleted from
-				// 		*	the scope object.
-				// 		*/
-				// 		for(var n=0; n<mutation.removedNodes.length;n++) {
-				// 			var uid = noInfoPath.toScopeSafeGuid(noKendoHelpers.getGridRowUID(mutation.removedNodes[n])),
-				// 				non = noInfoPath.getItem(scope, "noNavigation"),
-				// 				watch = non[ctx.component.scopeKey + "_" + uid];
-				//
-				// 				if(watch && watch.deregister) {
-				// 					watch.deregister();
-				//
-				// 					delete non[ctx.component.scopeKey + "_" + uid];
-				// 				}
-				// 		}
-				//
-				// 		/*
-				// 		*	Each node added to the grid is recompiled using `$compile` via
-				// 		*	the `noKendoHelpers.ngCompileSelectedRow` method.
-				// 		*/
-				// 		for(var n1=0; n1<mutation.addedNodes.length;n1++) {
-				// 			var uid = noInfoPath.toScopeSafeGuid(noKendoHelpers.getGridRowUID(mutation.addedNodes[n1]));
-				//
-				// 			noKendoHelpers.ngCompileSelectedRow(ctx, scope, el, "noGrid");
-				//
-				// 			_registerWatch(ctx, scope, el, uid);
-				// 		}
-				// 	}
-				// }.bind(ctx, ctx, scope, el));
-				//
-				// // configuration of the observer:
-				// var config = { attributes: true, childList: true, characterData: true };
-				//
-				// // pass in the target node, as well as the observer options
-				// observer.observe(target, config);
+
 
 			} else {
 				_registerWatch(ctx, scope, el);
@@ -330,27 +289,10 @@
 			//console.log("pubID", pubID);
 			scope.$on("$destroy", function () {
 				//console.log("$destroy", "PubSub::unsubscribe", "no-validation::dirty-state-changed");
-				PubSub.unsubscribe(pubID);
-				//if(observer) observer.disconnect();
+				if(pubID) PubSub.unsubscribe(pubID);
 
-				//stopNoNavigationWatch();
+				if(unwatch) unwatch();
 			});
-
-			// scope.$watchCollection(ctx.primary.scopeKey, function (navBarName, e) {
-			// 	var cnav, barid;
-			// 	if(scope[ctx.primary.scopeKey].$dirty) {
-			// 		cnav = _getCurrentNavBar(navBarName, scope, el);
-			// 		barid = cnav.attr("bar-id") + ".dirty";
-			// 		if(!cnav.attr("bar-id").includes(".dirty")) {
-			// 			noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-			// 		}
-			// 	} else {
-			// 		cnav = _getCurrentNavBar(navBarName, scope, el);
-			// 		barid = cnav.attr("bar-id").replace(/\.dirty/, "");
-			// 		noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-			// 	}
-			// }.bind(ctx, ctx.component.scopeKey));
-
 		}
 
 		return {
@@ -393,7 +335,7 @@
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
 			var barkey = navBarName;
-			console.log("changeNavBar", arguments);
+			console.log("changeNavBar", navBarName, barid);
 			if(barid === "^") {
 				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),
 					p = t.split(".");
@@ -443,9 +385,16 @@
 		}])
 
 		.run(["$rootScope", "noAreaLoader", "noPrompt", "PubSub", "$state", function ($rootScope, noAreaLoader, noPrompt, PubSub, $state) {
+
 			$rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-				//console.log("$stateChangeSuccess");
-				toState.data = angular.extend({}, toState.data);
+
+
+
+				if(toState.name === "startup") {
+					toState.data = angular.extend({}, {registeredComponents: 0}, toState.data);
+				} else {
+					toState.data = angular.extend({}, {registeredComponents: noAreaLoader.registerArea(toState.name)}, toState.data);
+				}
 
 				toState.data.pubSubId = PubSub.subscribe("noSync::complete", function(a, b) {
 					//TODO: Stash the pubsub id on the toState's data property
@@ -458,17 +407,29 @@
 				event.currentScope.$root.noNav = event.currentScope.$root.noNav ? event.currentScope.$root.noNav : {};
 				event.currentScope.$root.noNav[fromState.name] = fromParams;
 
-				console.log("noAreaLoader::Start", toState.name);
 				noAreaLoader.unRegisterArea(fromState.name);
-				if(toState.name !== "startup" && noAreaLoader.registerArea(toState.name) > 3) {
+
+				//if(fromState.name === "startup") console.groupEnd();
+				console.groupEnd();
+				console.info("$stateChangeSuccess: from", fromState.name, "==>", toState.name);
+				console.groupCollapsed();
+
+				console.log("noAreaLoader::Start", toState.name);
+
+				if(!toState.data.hidePrompt) {
 
 					noPrompt.show("Loading Area", "<div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div>" , null, {width: "40%"});
 				}
 
 			});
 
+			// $rootScope.$on("noAreaLoader::Complete", function (e, data) {
+			//
+			// });
+
 
 			window.addEventListener("error", function() {
+				console.groupEnd();
 				noPrompt.hide(0);
 			});
 		}])
