@@ -101,11 +101,9 @@
 		}
 
 		function _changeNavBar(ctx, el, n, o, s) {
-			//console.log(ctx, el, n, o, s);
-			if(n) {
+			if(n !== o) {
 				el.find("navbar").addClass("ng-hide");
 				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
-
 			}
 		}
 
@@ -129,7 +127,6 @@
 				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
 			} else {
 				console.warn("Possible dead code area.");
-				//scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noNavigationManager.changeNavBar.bind(ctx, ctx, scope, el, ctx.component.scopeKey));
 			}
 
 		}
@@ -253,7 +250,7 @@
 
 				if(!scope.noNavigation[ctx.component.scopeKey]) scope.noNavigation[ctx.component.scopeKey] = {};
 
-				scope.$on("noAreaLoader::areaReady", function(ctx){
+				unwatch = scope.$on("noAreaLoader::areaReady", function(ctx){
 					/*
 					*	When a KendoUI Grid is not involved, the noNavigation directive instead
 					*	subscribes to the `no-validation::dirty-state-changed` event published by
@@ -269,12 +266,12 @@
 
 						if(state.isDirty) {
 							//scope.noNavigation[navBarName].currentNavBar = baridDirty;
-							noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
-							_changeNavBar(this, el, baridDirty, baridDirty, scope);
+							//noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
+							_changeNavBar(this, el, baridDirty, barid, scope);
 						}else{
 							//scope.noNavigation[navBarName].currentNavBar = barid;
-							noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-							_changeNavBar(this, el, barid, barid, scope);
+							//noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+							_changeNavBar(this, el, barid, baridDirty, scope);
 						}
 
 						// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
@@ -335,15 +332,18 @@
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
 			var barkey = navBarName;
-			console.log("changeNavBar", navBarName, barid);
-			if(barid === "^") {
-				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),
-					p = t.split(".");
+			var currentBar = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar");
 
-				barid = p[0];
+			if(currentBar !== barid) {
+				if(barid === "^") {
+					var p = currentBar.split(".");
+					barid = p[0];
+				}
+
+				noInfoPath.setItem(scope, "noNavigation." + barkey + ".currentNavBar", barid);
+
+				console.warn("changeNavBar", navBarName, currentBar, barid);
 			}
-
-			noInfoPath.setItem(scope, "noNavigation." + barkey + ".currentNavBar", barid);
 		};
 
 		this.changeGridRowNavBar = function (ctx, scope, el, gridScopeId, navBarName, barid) {
@@ -559,7 +559,7 @@
 			}
 
 			function _link(scope, el, attrs) {
-				scope.$on("noTabs::Change", function (e, t, p) {
+				var unWatchChange  = scope.$on("noTabs::Change", function (e, t, p) {
 					var te = angular.element(t.html()),
 						ta = te.attr("btnbar");
 
@@ -571,16 +571,22 @@
 
 				noFormConfig.showNavBar();
 
-				scope.$on("noForm::dirty", function () {
+				var unWatchDirty = scope.$on("noForm::dirty", function () {
 					if(scope.currentTabName) {
 						noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
 					}
 				});
 
-				scope.$on("noForm::clean", function () {
+				var unWatchClean = scope.$on("noForm::clean", function () {
 					if(scope.currentTabName) {
 						noFormConfig.btnBarChange(scope.currentTabName);
 					}
+				});
+
+				scope.$on("$destroy", function(){
+					if(unWatchChange) unWatchChange();
+					if(unWatchDirty) unWatchDirty();
+					if(unWatchClean) unWatchClean();
 				});
 
 			}

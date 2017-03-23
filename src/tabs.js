@@ -180,7 +180,7 @@
 							}
 						}
 
-						for(var i = 0, ndx = 0; i < data.length; i++) {
+						for(var i = 0; i < data.length; i++) {
 							var li = angular.element("<li></li>"),
 								a = angular.element("<a href=\"\#\"></a>"),
 								datum = data[i],
@@ -191,7 +191,9 @@
 								li.addClass("active");
 								defaultTab = a;
 							}
+
 							li.attr("ndx", ndx);
+
 							a.text(txt);
 
 							li.append(a);
@@ -203,12 +205,6 @@
 
 						var tab = el.find("ul").find("li.active");
 						tab.children("a").click();
-
-						// pnl = el.find("no-tab-panels").first(),
-						// ndx2 = tab.attr("ndx"),
-						// noid = el.attr("noid"),
-						// key = "noTabs_" + noid;
-
 
 					});
 			}
@@ -243,7 +239,7 @@
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
 				if(ctx.routeName) {
 					ctx.isDirty = state.isDirty;
-					if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx);					
+					if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty");
 				}
 			});
 

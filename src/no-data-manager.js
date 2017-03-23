@@ -79,22 +79,19 @@
 					comp = noForm.noComponents[noForm.primaryComponent],
 					ds = noDataSource.create(comp.noDataSource, scope);
 
-					if(data.$valid) {
-						var saveData = noParameterParser.parse(data);
 
-						if(saveData[comp.noDataSource.primaryKey]){
-							ds.update(saveData, noTrans)
-								.then(_successful.bind(null, ctx, resolve, newctx))
-								.catch(_fault.bind(null, ctx, reject, newctx));
-						} else {
-							ds.create(saveData, noTrans)
-								.then(_successful.bind(null, ctx, resolve, newctx))
-								.catch(_fault.bind(null, ctx, reject, newctx));
-						}
+					var saveData = data;
+
+					if(saveData[comp.noDataSource.primaryKey]){
+						ds.update(saveData, noTrans)
+							.then(_successful.bind(null, ctx, resolve, newctx))
+							.catch(_fault.bind(null, ctx, reject, newctx));
 					} else {
-						scope.$broadcast("no::validate");
-						reject("Form is invalid.");
+						ds.create(saveData, noTrans)
+							.then(_successful.bind(null, ctx, resolve, newctx))
+							.catch(_fault.bind(null, ctx, reject, newctx));
 					}
+
 			});
 		}
 
@@ -110,18 +107,26 @@
 					},
 					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName);
 
-				noPrompt.show(
-					"Save in Progress",
-					"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
-					null,
-					{
-						height: "15%"
-					}
-				);
+
 
 				return $q(function(resolve, reject){
 					if(data.$valid) {
+						noPrompt.show(
+							"Save in Progress",
+							"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
+							null,
+							{
+								height: "15%"
+							}
+						);
+
+						if(!data.commit) {
+							data = new noInfoPath.data.NoDataModel(schema, data);
+						}
+
+
 						data.commit();
+
 						if(comp.noDataSource.noTransaction) {
 
 							noTrans.upsert(data.current)
@@ -132,7 +137,7 @@
 						}
 					} else {
 						scope.$broadcast("no::validate");
-						reject("Form is invalid.");
+						reject("Form is invalid.", data);
 						noPrompt.hide();
 					}
 				});

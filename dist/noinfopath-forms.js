@@ -891,7 +891,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 							}
 						}
 
-						for(var i = 0, ndx = 0; i < data.length; i++) {
+						for(var i = 0; i < data.length; i++) {
 							var li = angular.element("<li></li>"),
 								a = angular.element("<a href=\"\#\"></a>"),
 								datum = data[i],
@@ -902,7 +902,9 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 								li.addClass("active");
 								defaultTab = a;
 							}
+
 							li.attr("ndx", ndx);
+
 							a.text(txt);
 
 							li.append(a);
@@ -914,12 +916,6 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 						var tab = el.find("ul").find("li.active");
 						tab.children("a").click();
-
-						// pnl = el.find("no-tab-panels").first(),
-						// ndx2 = tab.attr("ndx"),
-						// noid = el.attr("noid"),
-						// key = "noTabs_" + noid;
-
 
 					});
 			}
@@ -954,7 +950,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
 				if(ctx.routeName) {
 					ctx.isDirty = state.isDirty;
-					if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty", ctx);					
+					if(ctx.isDirty) console.log("noTabs", "no-validation::dirty-state-changed::isDirty");
 				}
 			});
 
@@ -1088,11 +1084,9 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 		}
 
 		function _changeNavBar(ctx, el, n, o, s) {
-			//console.log(ctx, el, n, o, s);
-			if(n) {
+			if(n !== o) {
 				el.find("navbar").addClass("ng-hide");
 				el.find("navbar[bar-id='" + n + "']").removeClass("ng-hide");
-
 			}
 		}
 
@@ -1116,7 +1110,6 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
 			} else {
 				console.warn("Possible dead code area.");
-				//scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noNavigationManager.changeNavBar.bind(ctx, ctx, scope, el, ctx.component.scopeKey));
 			}
 
 		}
@@ -1240,7 +1233,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 				if(!scope.noNavigation[ctx.component.scopeKey]) scope.noNavigation[ctx.component.scopeKey] = {};
 
-				scope.$on("noAreaLoader::areaReady", function(ctx){
+				unwatch = scope.$on("noAreaLoader::areaReady", function(ctx){
 					/*
 					*	When a KendoUI Grid is not involved, the noNavigation directive instead
 					*	subscribes to the `no-validation::dirty-state-changed` event published by
@@ -1256,12 +1249,12 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 						if(state.isDirty) {
 							//scope.noNavigation[navBarName].currentNavBar = baridDirty;
-							noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
-							_changeNavBar(this, el, baridDirty, baridDirty, scope);
+							//noNavigationManager.changeNavBar(this, scope, el, navBarName, baridDirty);
+							_changeNavBar(this, el, baridDirty, barid, scope);
 						}else{
 							//scope.noNavigation[navBarName].currentNavBar = barid;
-							noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
-							_changeNavBar(this, el, barid, barid, scope);
+							//noNavigationManager.changeNavBar(this, scope, el, navBarName, barid);
+							_changeNavBar(this, el, barid, baridDirty, scope);
 						}
 
 						// if(cnav && !cnav.attr("bar-id").includes(".dirty")) {
@@ -1322,15 +1315,18 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 		this.changeNavBar = function (ctx, scope, el, navBarName, barid) {
 			var barkey = navBarName;
-			console.log("changeNavBar", navBarName, barid);
-			if(barid === "^") {
-				var t = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar"),
-					p = t.split(".");
+			var currentBar = noInfoPath.getItem(scope,  "noNavigation." + barkey + ".currentNavBar");
 
-				barid = p[0];
+			if(currentBar !== barid) {
+				if(barid === "^") {
+					var p = currentBar.split(".");
+					barid = p[0];
+				}
+
+				noInfoPath.setItem(scope, "noNavigation." + barkey + ".currentNavBar", barid);
+
+				console.warn("changeNavBar", navBarName, currentBar, barid);
 			}
-
-			noInfoPath.setItem(scope, "noNavigation." + barkey + ".currentNavBar", barid);
 		};
 
 		this.changeGridRowNavBar = function (ctx, scope, el, gridScopeId, navBarName, barid) {
@@ -1546,7 +1542,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 			}
 
 			function _link(scope, el, attrs) {
-				scope.$on("noTabs::Change", function (e, t, p) {
+				var unWatchChange  = scope.$on("noTabs::Change", function (e, t, p) {
 					var te = angular.element(t.html()),
 						ta = te.attr("btnbar");
 
@@ -1558,16 +1554,22 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 				noFormConfig.showNavBar();
 
-				scope.$on("noForm::dirty", function () {
+				var unWatchDirty = scope.$on("noForm::dirty", function () {
 					if(scope.currentTabName) {
 						noFormConfig.btnBarChange(scope.currentTabName + ".dirty");
 					}
 				});
 
-				scope.$on("noForm::clean", function () {
+				var unWatchClean = scope.$on("noForm::clean", function () {
 					if(scope.currentTabName) {
 						noFormConfig.btnBarChange(scope.currentTabName);
 					}
+				});
+
+				scope.$on("$destroy", function(){
+					if(unWatchChange) unWatchChange();
+					if(unWatchDirty) unWatchDirty();
+					if(unWatchClean) unWatchClean();
 				});
 
 			}
@@ -2584,22 +2586,19 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 					comp = noForm.noComponents[noForm.primaryComponent],
 					ds = noDataSource.create(comp.noDataSource, scope);
 
-					if(data.$valid) {
-						var saveData = noParameterParser.parse(data);
 
-						if(saveData[comp.noDataSource.primaryKey]){
-							ds.update(saveData, noTrans)
-								.then(_successful.bind(null, ctx, resolve, newctx))
-								.catch(_fault.bind(null, ctx, reject, newctx));
-						} else {
-							ds.create(saveData, noTrans)
-								.then(_successful.bind(null, ctx, resolve, newctx))
-								.catch(_fault.bind(null, ctx, reject, newctx));
-						}
+					var saveData = data;
+
+					if(saveData[comp.noDataSource.primaryKey]){
+						ds.update(saveData, noTrans)
+							.then(_successful.bind(null, ctx, resolve, newctx))
+							.catch(_fault.bind(null, ctx, reject, newctx));
 					} else {
-						scope.$broadcast("no::validate");
-						reject("Form is invalid.");
+						ds.create(saveData, noTrans)
+							.then(_successful.bind(null, ctx, resolve, newctx))
+							.catch(_fault.bind(null, ctx, reject, newctx));
 					}
+
 			});
 		}
 
@@ -2615,18 +2614,26 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 					},
 					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName);
 
-				noPrompt.show(
-					"Save in Progress",
-					"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
-					null,
-					{
-						height: "15%"
-					}
-				);
+
 
 				return $q(function(resolve, reject){
 					if(data.$valid) {
+						noPrompt.show(
+							"Save in Progress",
+							"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
+							null,
+							{
+								height: "15%"
+							}
+						);
+
+						if(!data.commit) {
+							data = new noInfoPath.data.NoDataModel(schema, data);
+						}
+
+
 						data.commit();
+
 						if(comp.noDataSource.noTransaction) {
 
 							noTrans.upsert(data.current)
@@ -2637,7 +2644,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 						}
 					} else {
 						scope.$broadcast("no::validate");
-						reject("Form is invalid.");
+						reject("Form is invalid.", data);
 						noPrompt.hide();
 					}
 				});
