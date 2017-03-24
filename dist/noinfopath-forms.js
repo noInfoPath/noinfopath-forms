@@ -1,6 +1,6 @@
 /*
  * # noinfopath.forms
- * @version 2.0.36
+ * @version 2.0.37
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -1091,7 +1091,8 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 		}
 
 		function _registerWatch(ctx, scope, el, uid) {
-			var scopeKey = uid ? ctx.component.scopeKey + "_" + uid : ctx.component.scopeKey;
+			var scopeKey = uid ? ctx.component.scopeKey + "_" + uid : ctx.component.scopeKey,
+				unRegWatch;
 
 			noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".currentNavBar", ctx.component.default);
 
@@ -1104,14 +1105,17 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 			*	`noKendoHelpers.changeRowNavBarWatch` method is called to handle
 			*	the event.
 			*/
+
+			// if we have a uid we assume that it is a grid row.
 			if(uid) {
-				var unRegWatch = scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
+				unRegWatch = scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
 
 				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
 			} else {
-				console.warn("Possible dead code area.");
-			}
+				unRegWatch = scope.$watch("noNavigation." + scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
 
+				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
+			}
 		}
 
 		function _compile(el, attrs) {
