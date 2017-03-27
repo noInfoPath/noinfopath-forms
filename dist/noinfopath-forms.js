@@ -1,6 +1,6 @@
 /*
  * # noinfopath.forms
- * @version 2.0.36
+ * @version 2.0.37
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -1281,7 +1281,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 		};
 	}
 
-	function NoNavigationManagerService($q, $http, $state, noKendoHelpers) {
+	function NoNavigationManagerService($q, $http, $state, noKendoHelpers, noStateHelper) {
 		this.configure = function () {
 			return $q(function (resolve, reject) {
 				var routes;
@@ -1355,7 +1355,14 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 			noInfoPath.setItem(scope, "noNavigation." + navBarName + ".validationState", state);
 		};
 
+		this.backtrack = function() {
+			var toState = $state.current.data.returnTo;
 
+			if(!toState) throw "$state.current.data.returnState is not defined. Cannot backtrack";
+
+			$state.go(toState.state.name, toState.params);
+
+		};
 	}
 
 
@@ -1370,7 +1377,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 		.run(["$rootScope", "noAreaLoader", "noPrompt", "PubSub", "$state", function ($rootScope, noAreaLoader, noPrompt, PubSub, $state) {
 
 			$rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-
+				toState.data = angular.extend({}, toState.data, {returnTo: {state: fromState, params: fromParams}});
 
 
 				if(toState.name === "startup") {
@@ -1612,7 +1619,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 
 		.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
 
-		.service("noNavigationManager", ["$q", "$http", "$state", "noKendoHelpers", NoNavigationManagerService]);
+		.service("noNavigationManager", ["$q", "$http", "$state", "noKendoHelpers", "noStateHelper", NoNavigationManagerService]);
 })(angular);
 
 //validation.js
