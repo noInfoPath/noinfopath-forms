@@ -1,6 +1,10 @@
 /*
  * # noinfopath.forms
+<<<<<<< HEAD
  * @version 2.0.37
+=======
+ * @version 2.0.38
+>>>>>>> e0d86c7b86305445646ca0908f9884e79b7ea13e
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -1091,7 +1095,8 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 		}
 
 		function _registerWatch(ctx, scope, el, uid) {
-			var scopeKey = uid ? ctx.component.scopeKey + "_" + uid : ctx.component.scopeKey;
+			var scopeKey = uid ? ctx.component.scopeKey + "_" + uid : ctx.component.scopeKey,
+				unRegWatch;
 
 			noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".currentNavBar", ctx.component.default);
 
@@ -1104,14 +1109,17 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 			*	`noKendoHelpers.changeRowNavBarWatch` method is called to handle
 			*	the event.
 			*/
+
+			// if we have a uid we assume that it is a grid row.
 			if(uid) {
-				var unRegWatch = scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
+				unRegWatch = scope.$watch("noNavigation." + scopeKey + ".currentNavBar", noKendoHelpers.changeRowNavBarWatch.bind(ctx, ctx, scope, el));
 
 				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
 			} else {
-				console.warn("Possible dead code area.");
-			}
+				unRegWatch = scope.$watch("noNavigation." + scopeKey + ".currentNavBar", _changeNavBar.bind(ctx, ctx, el));
 
+				noInfoPath.setItem(scope, "noNavigation." + scopeKey + ".deregister", unRegWatch);
+			}
 		}
 
 		function _compile(el, attrs) {
@@ -2593,15 +2601,18 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 					comp = noForm.noComponents[noForm.primaryComponent],
 					ds = noDataSource.create(comp.noDataSource, scope);
 
+					if(!data.commit) {
+						data = new noInfoPath.data.NoDataModel(schema, data);
+					}
 
-					var saveData = data;
+					data.commit();
 
-					if(saveData[comp.noDataSource.primaryKey]){
-						ds.update(saveData, noTrans)
+					if(data.current[comp.noDataSource.primaryKey]){
+						ds.update(data.current, noTrans)
 							.then(_successful.bind(null, ctx, resolve, newctx))
 							.catch(_fault.bind(null, ctx, reject, newctx));
 					} else {
-						ds.create(saveData, noTrans)
+						ds.create(data.current, noTrans)
 							.then(_successful.bind(null, ctx, resolve, newctx))
 							.catch(_fault.bind(null, ctx, reject, newctx));
 					}

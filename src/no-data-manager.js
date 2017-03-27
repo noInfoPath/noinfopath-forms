@@ -79,15 +79,18 @@
 					comp = noForm.noComponents[noForm.primaryComponent],
 					ds = noDataSource.create(comp.noDataSource, scope);
 
+					if(!data.commit) {
+						data = new noInfoPath.data.NoDataModel(schema, data);
+					}
 
-					var saveData = data;
+					data.commit();
 
-					if(saveData[comp.noDataSource.primaryKey]){
-						ds.update(saveData, noTrans)
+					if(data.current[comp.noDataSource.primaryKey]){
+						ds.update(data.current, noTrans)
 							.then(_successful.bind(null, ctx, resolve, newctx))
 							.catch(_fault.bind(null, ctx, reject, newctx));
 					} else {
-						ds.create(saveData, noTrans)
+						ds.create(data.current, noTrans)
 							.then(_successful.bind(null, ctx, resolve, newctx))
 							.catch(_fault.bind(null, ctx, reject, newctx));
 					}
