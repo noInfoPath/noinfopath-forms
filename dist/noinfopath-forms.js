@@ -1286,7 +1286,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 	}
 
 	function NoNavigationManagerService($q, $http, $state, noKendoHelpers, noStateHelper) {
-		this.configure = function () {
+		this.configure = function (url) {
 			return $q(function (resolve, reject) {
 				var routes;
 
@@ -1310,7 +1310,7 @@ function NoPromptService($compile, $rootScope, $timeout, PubSub) {
 					resolve();
 				}
 
-				$http.get("navbars/routes.json")
+				$http.get(url || "routes.json")
 					.then(saveRoutes)
 					.then(configureStates)
 					.catch(reject);
