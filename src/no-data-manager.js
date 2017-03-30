@@ -2,7 +2,7 @@
 (function (angular, undefined) {
 	"use strict";
 
-	function NoDataManagerService($timeout, $q, $rootScope, noLoginService, noTransactionCache, noParameterParser, noDataSource, noKendoHelpers, noPrompt) {
+	function NoDataManagerService($timeout, $q, $rootScope, noConfig, noLoginService, noTransactionCache, noParameterParser, noDataSource, noKendoHelpers, noPrompt) {
 		function _initSession(ctx, scope) {
 			console.log(ctx);
 		}
@@ -49,10 +49,11 @@
 			}, 500);
 		}
 
-		function _fault(ctx, reject, err) {
-			console.error(err);
+		function _fault(ctx, reject, data, err) {
+			var msg = err.name + ": " + err.message;
+			noPrompt.hide();
 			noPrompt.show(
-				"Save Error", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Save Failed.<code>" + JSON.stringify(err) + "</code></div>",
+				"Save Error", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Save Failed. </br>" + (noConfig.current.debug ? "<code>" + JSON.stringify(err) + "</code>" : msg) + "</div>",
 				function(e){
 					if($(e.target).attr("value") === "Cancel") {
 						ctx.error = err;
@@ -66,7 +67,7 @@
 						cancelLabel: "Close",
 						showOK: false
 					},
-					scope: scope,
+					scope: data.scope,
 					width: "60%",
 					height: "35%",
 				});
@@ -272,6 +273,6 @@
 	}
 
 	angular.module("noinfopath.forms")
-		.service("noDataManager", ["$timeout", "$q", "$rootScope", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
+		.service("noDataManager", ["$timeout", "$q", "$rootScope", "noConfig", "noLoginService", "noTransactionCache", "noParameterParser", "noDataSource", "noKendoHelpers", "noPrompt", NoDataManagerService])
 		;
 })(angular);

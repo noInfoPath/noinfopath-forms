@@ -381,7 +381,7 @@
 
 		.directive("noGrowler", ["$timeout", NoGrowlerDirective])
 
-		.service("noPrompt", ["$compile", "$rootScope", "$timeout", "PubSub", NoPromptService])
+		//.service("noPrompt", ["$compile", "$rootScope", "$timeout", "PubSub", NoPromptService])
 
 		;
 
