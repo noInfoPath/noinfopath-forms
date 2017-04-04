@@ -43,7 +43,7 @@
 				execQueue = actions ? noActionQueue.createQueue(ctx, scope, el, actions) : undefined,
 				tabState = $state.current.data.noTabs[id];
 
-				console.log(tabState, $state.current.data.backtracking);
+				//console.log(tabState, $state.current.data.backtracking);
 
 			//First deactivate the active tab.
 			tab.removeClass("active");
@@ -93,7 +93,7 @@
 		}
 
 		function _static(ctx, scope, el, attrs) {
-			console.log("noTabs::_static");
+			//console.log("noTabs::_static");
 
 			var ul = el.find("ul").first(),
 				lis = ul.length > 0 ? ul.children() : null,
@@ -123,7 +123,7 @@
 		}
 
 		function _dynamic(ctx, scope, el, attrs) {
-			console.log("noTabs::_dynamic");
+			//console.log("noTabs::_dynamic");
 			var dsCfg, ds;
 
 			if(ctx.noid) {

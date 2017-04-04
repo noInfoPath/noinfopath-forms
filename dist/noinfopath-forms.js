@@ -510,7 +510,7 @@
 				execQueue = actions ? noActionQueue.createQueue(ctx, scope, el, actions) : undefined,
 				tabState = $state.current.data.noTabs[id];
 
-				console.log(tabState, $state.current.data.backtracking);
+				//console.log(tabState, $state.current.data.backtracking);
 
 			//First deactivate the active tab.
 			tab.removeClass("active");
@@ -560,7 +560,7 @@
 		}
 
 		function _static(ctx, scope, el, attrs) {
-			console.log("noTabs::_static");
+			//console.log("noTabs::_static");
 
 			var ul = el.find("ul").first(),
 				lis = ul.length > 0 ? ul.children() : null,
@@ -590,7 +590,7 @@
 		}
 
 		function _dynamic(ctx, scope, el, attrs) {
-			console.log("noTabs::_dynamic");
+			//console.log("noTabs::_dynamic");
 			var dsCfg, ds;
 
 			if(ctx.noid) {
@@ -1198,13 +1198,13 @@
 			//Record where we are going
 			if(!fromState.abstract && !!fromState.name && fromState.name !== "startup" && !isHome && toState.name !== fromState.name && !fromState.data.backtracked && !fromState.data.notBacktrackable)
 			{
-				console.log("going forward");
+				//console.log("going forward");
 				if(fromState.data) {
 					toState.data.backtracking = false;
 				}
 				$rootScope.backtrack.push({"current": toState.name, name: fromState.name, data: fromState.data, params: fromParams});
 			} else {
-				console.log("going backwards");
+				//console.log("going backwards");
 				if(fromState.data) {
 					toState.data.backtracking = true;
 				}
@@ -1216,7 +1216,7 @@
 			}
 
 			//console.groupEnd();
-			console.table($rootScope.backtrack, ["current", "name", "params"]);
+			//console.table($rootScope.backtrack, ["current", "name", "params"]);
 			//console.groupCollapsed();
 		};
 
@@ -1639,7 +1639,7 @@
 					ctl.bind('blur', _blur.bind(null, el, fld, lbl));
 
 					scope.$on("$destroy", function(unbind1, unbind2) {
-						console.log("Unbinding", 'no::validate', 'no::validate:reset');
+						//console.log("Unbinding", 'no::validate', 'no::validate:reset');
 						unbind1();
 						unbind2();
 					}.bind(
@@ -2427,9 +2427,12 @@
 				}
 
 				if(newctx.comp.scopeKey) {
-					var curData = noInfoPath.getItem(newctx.scope, newctx.comp.scopeKey);
+					var model = $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent],
+						newdata = data[newctx.comp.scopeKey] || data;
 
-					noParameterParser.update(data[newctx.comp.scopeKey] || data, curData);
+					model.update(newdata);
+
+					//noParameterParser.update(, curData);
 					//noInfoPath.setItem(newctx.scope, newctx.comp.scopeKey, data[newctx.comp.scopeKey] || data);
 				}
 
@@ -2518,12 +2521,14 @@
 						trans: noTrans,
 						scope: scope
 					},
-					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName);
+					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName),
+					savedata = data ?  data : $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent]
+					;
 
 
 
 				return $q(function(resolve, reject){
-					if(data.$valid) {
+					if(savedata.$valid) {
 						noPrompt.show(
 							"Save in Progress",
 							"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
@@ -2533,24 +2538,24 @@
 							}
 						);
 
-						if(!data.commit) {
-							data = new noInfoPath.data.NoDataModel(schema, data);
+						if(!savedata.commit) {
+							savedata = new noInfoPath.data.NoDataModel(schema, savedata);
 						}
 
 
-						data.commit();
+						savedata.commit();
 
 						if(comp.noDataSource.noTransaction) {
 
-							noTrans.upsert(data.current)
+							noTrans.upsert(savedata.current)
 								.then(_successful.bind(null, ctx, resolve, newctx))
 								.catch(_fault.bind(null, ctx, reject, newctx));
 						} else {
-							_upsert(ctx, scope, el, data.current, noTrans, newctx);
+							_upsert(ctx, scope, el, savedata.current, noTrans, newctx);
 						}
 					} else {
 						scope.$broadcast("no::validate");
-						reject("Form is invalid.", data);
+						reject("Form is invalid.", savedata);
 						noPrompt.hide();
 					}
 				});
@@ -2560,8 +2565,9 @@
 
 		function _undo(ctx, scope, el, dataKey, undoDataKey) {
 			return $q(function (resolve, reject) {
-				var data = noInfoPath.getItem(scope, dataKey);
-				data.undo();
+				var data = $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent];
+
+				if(data) data.undo();
 			});
 		}
 

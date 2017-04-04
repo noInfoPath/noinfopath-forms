@@ -18,9 +18,12 @@
 				}
 
 				if(newctx.comp.scopeKey) {
-					var curData = noInfoPath.getItem(newctx.scope, newctx.comp.scopeKey);
+					var model = $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent],
+						newdata = data[newctx.comp.scopeKey] || data;
 
-					noParameterParser.update(data[newctx.comp.scopeKey] || data, curData);
+					model.update(newdata);
+
+					//noParameterParser.update(, curData);
 					//noInfoPath.setItem(newctx.scope, newctx.comp.scopeKey, data[newctx.comp.scopeKey] || data);
 				}
 
@@ -109,12 +112,14 @@
 						trans: noTrans,
 						scope: scope
 					},
-					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName);
+					schema = scope["noDbSchema_" + ctx.datasource.databaseName].entity(ctx.datasource.entityName),
+					savedata = data ?  data : $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent]
+					;
 
 
 
 				return $q(function(resolve, reject){
-					if(data.$valid) {
+					if(savedata.$valid) {
 						noPrompt.show(
 							"Save in Progress",
 							"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
@@ -124,24 +129,24 @@
 							}
 						);
 
-						if(!data.commit) {
-							data = new noInfoPath.data.NoDataModel(schema, data);
+						if(!savedata.commit) {
+							savedata = new noInfoPath.data.NoDataModel(schema, savedata);
 						}
 
 
-						data.commit();
+						savedata.commit();
 
 						if(comp.noDataSource.noTransaction) {
 
-							noTrans.upsert(data.current)
+							noTrans.upsert(savedata.current)
 								.then(_successful.bind(null, ctx, resolve, newctx))
 								.catch(_fault.bind(null, ctx, reject, newctx));
 						} else {
-							_upsert(ctx, scope, el, data.current, noTrans, newctx);
+							_upsert(ctx, scope, el, savedata.current, noTrans, newctx);
 						}
 					} else {
 						scope.$broadcast("no::validate");
-						reject("Form is invalid.", data);
+						reject("Form is invalid.", savedata);
 						noPrompt.hide();
 					}
 				});
@@ -151,8 +156,9 @@
 
 		function _undo(ctx, scope, el, dataKey, undoDataKey) {
 			return $q(function (resolve, reject) {
-				var data = noInfoPath.getItem(scope, dataKey);
-				data.undo();
+				var data = $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent];
+
+				if(data) data.undo();
 			});
 		}
 

@@ -423,13 +423,13 @@
 			//Record where we are going
 			if(!fromState.abstract && !!fromState.name && fromState.name !== "startup" && !isHome && toState.name !== fromState.name && !fromState.data.backtracked && !fromState.data.notBacktrackable)
 			{
-				console.log("going forward");
+				//console.log("going forward");
 				if(fromState.data) {
 					toState.data.backtracking = false;
 				}
 				$rootScope.backtrack.push({"current": toState.name, name: fromState.name, data: fromState.data, params: fromParams});
 			} else {
-				console.log("going backwards");
+				//console.log("going backwards");
 				if(fromState.data) {
 					toState.data.backtracking = true;
 				}
@@ -441,7 +441,7 @@
 			}
 
 			//console.groupEnd();
-			console.table($rootScope.backtrack, ["current", "name", "params"]);
+			//console.table($rootScope.backtrack, ["current", "name", "params"]);
 			//console.groupCollapsed();
 		};
 

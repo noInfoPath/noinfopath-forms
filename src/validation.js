@@ -120,7 +120,7 @@
 					ctl.bind('blur', _blur.bind(null, el, fld, lbl));
 
 					scope.$on("$destroy", function(unbind1, unbind2) {
-						console.log("Unbinding", 'no::validate', 'no::validate:reset');
+						//console.log("Unbinding", 'no::validate', 'no::validate:reset');
 						unbind1();
 						unbind2();
 					}.bind(
