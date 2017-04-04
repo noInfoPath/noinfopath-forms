@@ -1,6 +1,6 @@
 /*
  * # noinfopath.forms
- * @version 2.0.43
+ * @version 2.0.44
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
