@@ -21,7 +21,7 @@
 					var model = $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent],
 						newdata = data[newctx.comp.scopeKey] || data;
 
-					model.update(newdata);
+					if(model.update) model.update(newdata);
 
 					//noParameterParser.update(, curData);
 					//noInfoPath.setItem(newctx.scope, newctx.comp.scopeKey, data[newctx.comp.scopeKey] || data);

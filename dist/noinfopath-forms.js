@@ -1,6 +1,6 @@
 /*
  * # noinfopath.forms
- * @version 2.0.44
+ * @version 2.0.45
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -2430,7 +2430,7 @@
 					var model = $("[name='" + ctx.form.primaryComponent + "']").scope()[ctx.form.primaryComponent],
 						newdata = data[newctx.comp.scopeKey] || data;
 
-					model.update(newdata);
+					if(model.update) model.update(newdata);
 
 					//noParameterParser.update(, curData);
 					//noInfoPath.setItem(newctx.scope, newctx.comp.scopeKey, data[newctx.comp.scopeKey] || data);
