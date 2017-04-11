@@ -2486,7 +2486,7 @@
 
 		}
 
-		function _upsert(ctx, scope, el, data, noTrans, newctx) {
+		function _upsert(ctx, scope, el, data, noTrans, newctx, schema) {
 			return $q(function (resolve, reject) {
 				var noForm = ctx.form,
 					comp = noForm.noComponents[noForm.primaryComponent],
@@ -2514,7 +2514,7 @@
 		function _save(ctx, scope, el, data) {
 				var noForm = ctx.form,
 					comp = noForm.noComponents[noForm.primaryComponent],
-					noTrans = noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope),
+					noTrans = ctx.datasource.noTransaction ? noTransactionCache.beginTransaction(noLoginService.user.userId, comp, scope) : null,
 					newctx = {
 						ctx: ctx,
 						comp: comp,
@@ -2551,7 +2551,7 @@
 								.then(_successful.bind(null, ctx, resolve, newctx))
 								.catch(_fault.bind(null, ctx, reject, newctx));
 						} else {
-							_upsert(ctx, scope, el, savedata.current, noTrans, newctx);
+							_upsert(ctx, scope, el, savedata.current, noTrans, newctx, schema);
 						}
 					} else {
 						scope.$broadcast("no::validate");
@@ -2594,12 +2594,12 @@
 			return promise;
 		}
 
-		function _deleteSelected(ctx, scope, el, gridName, tableName, entityLabel, primaryKey, message) {
+		function _deleteSelected(ctx, scope, el, gridName, tableName, entityLabel, primaryKey, message, provider, dbName, noTransRequired) {
 			var grid = scope[gridName],
 				checked = grid.tbody.find("input:checkbox:checked"),
 				dsCfg = {
-					"dataProvider": "noIndexedDb",
-					"databaseName": "rmEFR2",
+					"dataProvider": provider || "noIndexedDb",
+					"databaseName": dbName || "rmEFR2",
 					"entityName": tableName,
 					"primaryKey": primaryKey
 				},
@@ -2636,7 +2636,13 @@
 					});
 			}
 
-			noPrompt.show("Confirm Deletion", "<div class=\"center-block\" style=\"font-size: 1.25em;\">" + compiledMessage + "</div><div style=\"width: 60%\" class=\"center-block\"><button type=\"button\" class=\"btn btn-danger btn-block btn-callback btn-auto-hide\" value=\"delete\">Permanently Delete Selected Items</button><button type=\"button\" class=\"btn btn-info btn-block btn-callback btn-auto-hide\" value=\"remove\">Removed Selected from this Device Only</button><button type=\"button\" class=\"btn btn-default btn-block btn-callback btn-auto-hide\" value=\"cancel\">Cancel, Do Not Remove or Delete</button></div>", function(e){
+			var threeOptions =	"<div class=\"center-block\" style=\"font-size: 1.25em;\">" + compiledMessage +
+								"</div><div style=\"width: 60%\" class=\"center-block\"><button type=\"button\" class=\"btn btn-danger btn-block btn-callback btn-auto-hide\" value=\"delete\">Permanently Delete Selected Items</button>" +
+								"<button type=\"button\" class=\"btn btn-info btn-block btn-callback btn-auto-hide\" value=\"remove\">Removed Selected from this Device Only</button><button type=\"button\" class=\"btn btn-default btn-block btn-callback btn-auto-hide\" value=\"cancel\">Cancel, Do Not Remove or Delete</button></div>",
+				twoOptions = "<div class=\"center-block\" style=\"font-size: 1.25em;\">" + compiledMessage +
+							 "</div><div style=\"width: 60%\" class=\"center-block\"><button type=\"button\" class=\"btn btn-danger btn-block btn-callback btn-auto-hide\" value=\"delete-notrans\">Permanently Delete Selected Items</button><button type=\"button\" class=\"btn btn-default btn-block btn-callback btn-auto-hide\" value=\"cancel\">Cancel, Do Not Remove or Delete</button></div>";
+
+			noPrompt.show("Confirm Deletion", noTransRequired ? twoOptions :  threeOptions, function(e){
 				switch($(e.target).attr("value")) {
 					case "remove":
 						_executeDeletes(scope, checked, ds);
@@ -2647,6 +2653,28 @@
 								if($(e.target).attr("value") === "OK") {
 									trans = noTransactionCache.beginTransaction(noLoginService.user.userId, {noDataSource: dsCfg}, scope);
 									_executeDeletes(scope, checked, ds, trans);
+								}
+							}, {
+								showCloseButton: true,
+								showFooter: {
+									showCancel: true,
+									cancelLabel: "Cancel",
+									showOK: true,
+									okLabel: "OK",
+									okValue: "OK",
+									okAutoHide: true
+								},
+								scope: scope,
+								width: "60%",
+								height: "35%",
+
+							});
+						break;
+
+					case "delete-notrans":
+						noPrompt.show("Confirm Permanent Deletion", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\"><b class=\"text-danger\">WARNING: THIS ACTION IS NOT REVERSABLE<br/>ALL USERS WILL BE AFFECTED BY THIS ACTION</b></div><div class=\"center-block text-center\" style=\"font-size: 1.25em;\">You are about to permanently delete " + pluralize(entityLabel, checked.length, true) + ".<br/>Click OK to proceed, or Cancel to abort this operation.</div>",function(e){
+								if($(e.target).attr("value") === "OK") {
+									_executeDeletes(scope, checked, ds);
 								}
 							}, {
 								showCloseButton: true,
