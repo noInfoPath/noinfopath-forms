@@ -105,8 +105,8 @@
 
 			el.find("no-tab-panels").first().addClass("tab-panels");
 
-			el.find("no-tab-panels > no-tab-panel > div")
-				.addClass("no-m-t-lg");
+			// el.find("no-tab-panels > no-tab-panel > div")
+			// 	.addClass("no-m-t-lg");
 
 			for(var lii = 0, ndx = 0; lii < lis.length; lii++) {
 				var lie = angular.element(lis[lii]);
@@ -195,7 +195,7 @@
 								//		create by the widget.
 							}else{
 								el.find("no-tab-panels").first().addClass("col-sm-10");
-								el.find("no-tab-panels > no-tab-panel > div").addClass("no-m-t-lg");
+								//el.find("no-tab-panels > no-tab-panel > div").addClass("no-m-t-lg");
 							}
 						}
 
@@ -286,7 +286,11 @@
 				ctx = hashStore.get(attrs.noid);
 			}
 
-			el.attr("id", id);
+			if(ctx.routeName) {
+				el.attr("id", id);
+			} else {
+				id = el.attr("id");
+			}
 
 			//Register this noTabs if it is not already on the currentState.
 			if(!$state.current.data.noTabs[id])
