@@ -2425,7 +2425,7 @@
 
 			ctx.data = data;
 
-			if(newctx) {
+			if(newctx && data) {
 				if(newctx.trans){
 					noTransactionCache.endTransaction(newctx.trans);
 				}
@@ -2462,14 +2462,14 @@
 				noPrompt.hide();
 				resolve(ctx);
 
-			}, 500);
+			}, 250);
 		}
 
 		function _fault(ctx, reject, data, err) {
 			var msg = err.name + ": " + err.message;
 			noPrompt.hide();
 			noPrompt.show(
-				"Save Error", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 80%\">Save Failed. </br>" + (noConfig.current.debug ? "<code>" + JSON.stringify(err) + "</code>" : msg) + "</div>",
+				"Save Error", "<div class=\"center-block text-center\" style=\"font-size: 1.25em; width: 400px; overflow: auto\">Save Failed. </br>" + (noConfig.current.debug ? "<div>" + JSON.stringify(err) + "</div>" : msg) + "</div>",
 				function(e){
 					if($(e.target).attr("value") === "Cancel") {
 						ctx.error = err;
@@ -2532,7 +2532,7 @@
 
 
 				return $q(function(resolve, reject){
-					if(savedata.$valid) {
+					if(savedata.$valid === undefined || savedata.$valid) {
 						noPrompt.show(
 							"Save in Progress",
 							"<div><div class=\"progress\"><div class=\"progress-bar progress-bar-info progress-bar-striped active\" role=\"progressbar\" aria-valuenow=\"100\" aria-valuemin=\"100\" aria-valuemax=\"100\" style=\"width: 100%\"></div></div></div>",
