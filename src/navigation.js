@@ -641,6 +641,7 @@
 	}
 
 	function NoRunner($timeout, $rootScope, noAreaLoader, noPrompt, PubSub, $state, noNavigationManager) {
+		console.log("NoRunner", $rootScope);
 		//Navigation start handler
 		$rootScope.$on('$stateChangeStart', function (event, toState, toParams, fromState, fromParams, options) {
 			noNavigationManager.updateBacktrackState(toState, toParams, fromState, fromParams, options);
@@ -664,7 +665,7 @@
 			//Stash the pubsub id on the toState's data property to unsubscribe fromState's data.pubsub.id.
 			toState.data.pubSubId = PubSub.subscribe("noSync::complete", function(a, b) {
 				if(toState.data.pubSubId) PubSub.unsubscribe(toState.data.pubSubId);
-				$state.reload($state.current.name);
+				if(toState.name !== $state.current.name) $state.reload($state.current.name);
 			});
 
 			//Legacy navigation track is being deprecated
