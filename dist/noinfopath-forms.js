@@ -496,7 +496,7 @@
 
 			//console.log("noTabs ctx.isDirty", ctx.isDirty);
 
-			if(ctx.isDirty) return;
+			if(ctx.widget && ctx.widget.preventTabChangeOnDirty !== false && ctx.isDirty) return;
 
 			var ul = el.find("ul").first(),
 				tab = ul.find("li.active"),
@@ -707,7 +707,7 @@
 
 			//console.log("noTab", "ctx", ctx);
 
-			if(noTab || dynamic) {
+			if((noTab && ctx.component.noDataSource) || dynamic) {
 				_dynamic(ctx, scope, el, attrs);
 			} else {
 				_static(ctx, scope, el, attrs);
@@ -810,7 +810,7 @@
 	*	When a bar configuration is a string then it is an alias
 	*	or a reference to another bar configuration.
 	*/
-	function NoNavigationDirective($injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers) {
+	function NoNavigationDirective($compile, $injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers) {
 		var templateFactories = {
 			"button": function (ctx, cfg, scope, el) {
 
@@ -844,7 +844,7 @@
 				var div = angular.element("<div></div>");
 				div.html(cfg.template);
 				div.addClass(cfg.class);
-				return div;
+				return $compile(div)(scope);
 			}
 		};
 
@@ -1517,7 +1517,7 @@
 		.directive("noNav", ["$q", "$state", "noFormConfig", NoNav])
 		.directive("noNavBar", ["$q", "$compile", "noTemplateCache", "$state", "noFormConfig", NoNavBar])
 		.directive("noReadOnly", [NoReadOnly])
-		.directive("noNavigation", ["$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
+		.directive("noNavigation", ["$compile", "$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
 		.run(["$timeout", "$rootScope", "noAreaLoader", "noPrompt", "PubSub", "$state", "noNavigationManager", NoRunner])
 		;
 })(angular);

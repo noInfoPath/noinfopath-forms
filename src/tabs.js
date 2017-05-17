@@ -29,7 +29,7 @@
 
 			//console.log("noTabs ctx.isDirty", ctx.isDirty);
 
-			if(ctx.isDirty) return;
+			if(ctx.widget && ctx.widget.preventTabChangeOnDirty !== false && ctx.isDirty) return;
 
 			var ul = el.find("ul").first(),
 				tab = ul.find("li.active"),
@@ -240,7 +240,7 @@
 
 			//console.log("noTab", "ctx", ctx);
 
-			if(noTab || dynamic) {
+			if((noTab && ctx.component.noDataSource) || dynamic) {
 				_dynamic(ctx, scope, el, attrs);
 			} else {
 				_static(ctx, scope, el, attrs);
