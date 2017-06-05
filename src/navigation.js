@@ -31,7 +31,7 @@
 	*	When a bar configuration is a string then it is an alias
 	*	or a reference to another bar configuration.
 	*/
-	function NoNavigationDirective($compile, $injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers) {
+	function NoNavigationDirective($compile, $injector, $q, $state, noFormConfig, noActionQueue, noNavigationManager, PubSub, noKendoHelpers, noTemplateCache) {
 		var templateFactories = {
 			"button": function (ctx, cfg, scope, el) {
 
@@ -66,6 +66,16 @@
 				div.html(cfg.template);
 				div.addClass(cfg.class);
 				return $compile(div)(scope);
+			},
+			"templateUrl": function(ctx, cfg, scope, el) {
+				return noTemplateCache.get(cfg.template)
+					.then(function(html){
+						var div = angular.element(html);
+						return $compile(div)(scope);
+					})
+					.catch(function(err){
+						return err;
+					});
 			}
 		};
 
@@ -135,6 +145,10 @@
 			}
 		}
 
+		function _templateUrlDone(btnBar, html){
+			btnBar.append(html);
+		}
+
 		function _compile(el, attrs) {
 			var ctx = noFormConfig.getComponentContextByRoute($state.current.name, undefined, "noNavigation", attrs.noForm);
 			//el.attr("noid", noInfoPath.createNoid());
@@ -197,10 +211,17 @@
 						tmpl = templateFactories[comp.type],
 						renderedComp = tmpl(ctx, comp, scope, el);
 
+					if(renderedComp.then) {
+						renderedComp
+							.then(_templateUrlDone.bind(null, btnBar))
+							.catch(console.error);
+					} else {
+						btnBar.append(renderedComp);
+					}
 					//JAG 1/7/2017 - moved this to the button template factory above.
 					//btn.click(_click.bind(ctx, ctx, comp, scope, el));
 
-					btnBar.append(renderedComp);
+
 				}
 
 				el.append(btnBar);
@@ -354,7 +375,7 @@
 
 				noInfoPath.setItem(scope, "noNavigation." + barkey + ".currentNavBar", barid);
 
-				console.warn("changeNavBar", navBarName, currentBar, barid);
+				//console.warn("changeNavBar", navBarName, currentBar, barid);
 			}
 		};
 
@@ -738,7 +759,7 @@
 		.directive("noNav", ["$q", "$state", "noFormConfig", NoNav])
 		.directive("noNavBar", ["$q", "$compile", "noTemplateCache", "$state", "noFormConfig", NoNavBar])
 		.directive("noReadOnly", [NoReadOnly])
-		.directive("noNavigation", ["$compile", "$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", NoNavigationDirective])
+		.directive("noNavigation", ["$compile", "$injector", "$q", "$state", "noFormConfig", "noActionQueue", "noNavigationManager", "PubSub", "noKendoHelpers", "noTemplateCache", NoNavigationDirective])
 		.run(["$timeout", "$rootScope", "noAreaLoader", "noPrompt", "PubSub", "$state", "noNavigationManager", NoRunner])
 		;
 })(angular);

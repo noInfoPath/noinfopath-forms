@@ -238,6 +238,8 @@
 				dynamic = ctx.noElement && !ctx.noElement.tabstrip,
 				pubID;
 
+
+
 			//console.log("noTab", "ctx", ctx);
 
 			if((noTab && ctx.component.noDataSource) || dynamic) {
@@ -256,6 +258,11 @@
 				// scope.$root.$broadcast("noTabs::Change", tab, pnl, noTab);
 			}
 
+			// scope.noTab = {
+			// 	select: _click.bind(null, ctx, scope, el)
+			// };
+			//
+			// console.log(scope);
 
 			pubID = PubSub.subscribe("no-validation::dirty-state-changed", function(state){
 				if(ctx.routeName) {
