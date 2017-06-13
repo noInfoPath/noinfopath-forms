@@ -1,6 +1,6 @@
 /*
  * # noinfopath.forms
- * @version 2.0.50
+ * @version 2.0.51
  *
  * Implements the NoInfoPath Transaction processing in conjunction with AngularJS validation mechanism.
  *
@@ -589,6 +589,52 @@
 
 		}
 
+		function _clickRoute(scope, el, attrs, e) {
+			var initialClick = !e.preventDefault;
+
+			if(!initialClick) e.preventDefault();
+
+			//console.log("noTabs ctx.isDirty", ctx.isDirty);
+			var ul = el.find("ul").first(),
+				tab = ul.find("li.active"),
+				ndx = tab.attr("ndx"),
+				noid = el.attr("noid"),
+				id = el.attr("id"),
+				pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']");
+
+			//First deactivate the active tab.
+			tab.removeClass("active");
+			//pnl.addClass("ng-hide");
+
+			//Next activate the tab that was clicked.
+			if(initialClick) {
+				tab = angular.element(e).closest("li");
+			} else {
+				tab = angular.element(e.target).closest("li");
+			}
+
+			ndx = tab.attr("ndx");
+			//pnl = el.find("no-tab-panels").first().children("[ndx='"+ ndx + "']");
+
+			tab.addClass("active");
+			//pnl.removeClass("ng-hide");
+
+			// tabState.tab = tab;
+			// tabState.panel = pnl;
+			// tabState.tabIndex = ndx;
+			$state.go(tab.attr("no-sref"));
+
+			PubSub.publish("noTabs::change", {
+				tab: tab,
+				pnl: pnl,
+				name: attrs.scopeKey,
+				ndx: ndx,
+				btnBar: tab.children("a").attr("btnbar"),
+				title: tab.children("a").text()
+			});
+
+		}
+
 		function _dynamic(ctx, scope, el, attrs) {
 			//console.log("noTabs::_dynamic");
 			var dsCfg, ds;
@@ -698,6 +744,32 @@
 
 		}
 
+		function _uiRouter(scope, el, attrs) {
+			var ul = el.find("ul").first(),
+				lis = ul.length > 0 ? ul.children() : null,
+				pnls = el.find("no-tab-panels").first().children("no-tab-panel"),
+				def = ul.find("li.active"),
+				defNdx;
+
+			//NOTE: Why is this here?
+			el.find("no-tab-panels").first().addClass("tab-panels");
+
+			// el.find("no-tab-panels > no-tab-panel > div")
+			// 	.addClass("no-m-t-lg");
+
+			for(var lii = 0, ndx = 0; lii < lis.length; lii++) {
+				var lie = angular.element(lis[lii]);
+
+				if(!lie.is(".filler-tab")) {
+					lie.attr("ndx", ndx);
+					angular.element(pnls[ndx]).attr("ndx", ndx++);
+				}
+
+			}
+
+			lis.find("a:not(.filler-tab)").click(_clickRoute.bind(null, scope, el, attrs));
+		}
+
 		function _link(ctx, scope, el, attrs) {
 
 			var noForm = ctx.form,
@@ -706,24 +778,32 @@
 				pubID;
 
 
+			if(attrs.noForm) {
+				if((noTab && ctx.component.noDataSource) || dynamic) {
+					_dynamic(ctx, scope, el, attrs);
+				} else {
+					_static(ctx, scope, el, attrs);
+					var tab = el.find("ul").find("li.active");
+					// pnl = el.find("no-tab-panels").first(),
+					// ndx2 = tab.attr("ndx"),
+					// noid = el.attr("noid"),
+					// key = "noTabs_" + noid;
 
+					_click(ctx, scope, el, tab.children("a"));
+
+					// noInfoPath.setItem(scope, key, ndx2);
+					// scope.$root.$broadcast("noTabs::Change", tab, pnl, noTab);
+				}
+			} else {
+				switch(attrs.panelType) {
+					case "ui-router":
+						_uiRouter(scope, el, attrs);
+						break;
+				}
+			}
 			//console.log("noTab", "ctx", ctx);
 
-			if((noTab && ctx.component.noDataSource) || dynamic) {
-				_dynamic(ctx, scope, el, attrs);
-			} else {
-				_static(ctx, scope, el, attrs);
-				var tab = el.find("ul").find("li.active");
-				// pnl = el.find("no-tab-panels").first(),
-				// ndx2 = tab.attr("ndx"),
-				// noid = el.attr("noid"),
-				// key = "noTabs_" + noid;
 
-				_click(ctx, scope, el, tab.children("a"));
-
-				// noInfoPath.setItem(scope, key, ndx2);
-				// scope.$root.$broadcast("noTabs::Change", tab, pnl, noTab);
-			}
 
 			// scope.noTab = {
 			// 	select: _click.bind(null, ctx, scope, el)
@@ -1638,7 +1718,9 @@
 			require: '?^^form',
 			compile: function(el, attrs) {
 
-				var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop], no-lookup, no-kendo-date-picker, no-file-upload");
+				var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop], no-lookup, no-kendo-date-picker, no-file-upload, no-auto-complete");
+
+				console.log(i);
 
 				return function(i, scope, el, attrs, form) {
 					var fld,
