@@ -88,7 +88,7 @@
 
 				var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop], no-lookup, no-kendo-date-picker, no-file-upload, no-auto-complete");
 
-				console.log(i);
+				//console.log(i);
 
 				return function(i, scope, el, attrs, form) {
 					var fld,

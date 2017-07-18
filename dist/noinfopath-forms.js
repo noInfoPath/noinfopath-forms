@@ -770,13 +770,25 @@
 			lis.find("a:not(.filler-tab)").click(_clickRoute.bind(null, scope, el, attrs));
 		}
 
+		function __makeScopeKey(ctx) {
+			if(!ctx.component) return "undefined";
+
+			var x = ctx.component && ctx.component.scopeKey,
+				t = ctx.componentKey.split("."),
+				l = t[t.length -1],
+				r = x || l;
+
+			return r;
+		};
 		function _link(ctx, scope, el, attrs) {
 
-			var noForm = ctx.form,
+			var scopeKey = __makeScopeKey(ctx),
+				noForm = ctx.form,
 				noTab = ctx.widget,
 				dynamic = ctx.noElement && !ctx.noElement.tabstrip,
 				pubID;
 
+				console.log("noTabs:ctx", ctx);
 
 			if(attrs.noForm) {
 				if((noTab && ctx.component.noDataSource) || dynamic) {
@@ -801,8 +813,14 @@
 						break;
 				}
 			}
-			//console.log("noTab", "ctx", ctx);
 
+			if(!scope[scopeKey + "_api"]) scope[scopeKey + "_api"] = {};
+			scope[scopeKey + "_api"].click = function(tabs, ndx) {
+				var tab = tabs.find("[ndx=" + ndx + "]");
+				console.log(scopeKey + "_api", tab);
+				tab.next().click();
+
+			}.bind(null, el.find("ul"));
 
 
 			// scope.noTab = {
@@ -1720,7 +1738,7 @@
 
 				var i = el.find("INPUT, TEXTAREA, SELECT, [ngf-drop], no-lookup, no-kendo-date-picker, no-file-upload, no-auto-complete");
 
-				console.log(i);
+				//console.log(i);
 
 				return function(i, scope, el, attrs, form) {
 					var fld,
